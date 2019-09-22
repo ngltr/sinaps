@@ -94,9 +94,17 @@ class Section:
     ## Initilialisation functions
 
     def init_sim(self,dx):
-        """Prepare the section to run a simulation with spatial resolution dx"""
+        """Prepare the section to run a simulation with spatial resolution dx
+        if dx = 0 , sec.dx will be use
+
+        """
         idS0=0
-        n=max(int(np.ceil(self.L/dx))-1,1)
+        if dx > 0:
+            self.dx=dx
+        try:
+            n=max(int(np.ceil(self.L/self.dx)),2)
+        except AttributeError:
+            raise ValueError('You must first define dx as a property for each section before using dx=0')
         self.dx=self.L/n
         self.x=np.linspace(self.dx/2,self.L-self.dx/2,n)##center of the compartiment, size n
         self.xb=np.linspace(0,self.L,n+1)##border of the compartiment, size n+1
@@ -265,6 +273,9 @@ class Neuron:
         self.sections=list()
         self.V_ref = V_ref
         self.dx = None
+        self.mat=None
+        self._x=None
+        self._y=None
 
     def __repr__(self):
         return "Neuron(sections={})".format(self.sections)
@@ -278,18 +289,18 @@ class Neuron:
         """
         self.sections.append({'i':i,'j':j,'obj':s,'num':len(self.sections)})
 
+    @property
+    def nb_nodes(self):
+        return max([max(s['i'],s['j']) for s in self.sections])+1
 
-
+    @property
     def adj_mat(self):
-        n=max(max(sections.values()))+1
-        self.mat = np.ndarray([n,n],Section)
-        for s in sections:
-            self.mat[s['i'],s['j']]=s['obj']
-
-
-
-
-
+        if self.mat is None:
+            n=self.nb_nodes
+            self.mat = np.ndarray([n,n],Section)
+            for s in self.sections:
+                self.mat[s['i'],s['j']]=s['obj']
+        return self.mat
 
     def init_sim(self,dx):
         """Prepare the neuron to run a simulation with spatial resolution dx"""
@@ -443,6 +454,10 @@ class Neuron:
         #todo
         return (np.concatenate( [ [s['num']]*len(s['idS']) for s in self.sections]),
                 np.concatenate([s['obj'].index for s in self.sections]))
+
+
+
+
 
 
 class Ion:
