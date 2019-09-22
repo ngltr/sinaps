@@ -14,7 +14,7 @@ class Simulation:
     """This class represent a simulation
     usage :
     S=Simulation(N,dx) with N type:Neuron and dx spatial_resolution [um]
-    S.run(tnrange)  with tnrange
+    S.run(tnrange)  with tnrange [ms]
 
     To record the concentration of one ion, one must run :
     S.record_ion(ion) with ion of type Ion
@@ -42,32 +42,38 @@ class Simulation:
         self.ions.append(ion)
         self.V_S0 = np.concatenate([self.V_S0, np.zeros(self.N.nb_comp)])
 
-    def run(self,t_span,**kwargs):
+    def run(self,t_span,method='BDF',**kwargs):
         """Run the simulation
         t : array
         A sequence of time points (ms) for which to solve the system
         """
         sol=solve_ivp(lambda t, y:Simulation.ode_function(y,t,self.idV,self.idS,
                                                 self.Cm,self.G,self.k_c,self.N),
-                      t_span,self.V_S0,
-                      atol = self.atol, **kwargs)
+                      t_span,
+                      self.V_S0,
+                      method=method,
+                      atol = self.atol,
+                       **kwargs)
 
 
         sec,pos = self.N.indexV()
-        df = pd.DataFrame(sol.y[:self.N.nb_comp,:].T , sol.t ,[sec, pos])
+        df = pd.DataFrame(sol.y[:self.N.nb_comp,:].T ,
+                          pd.to_timedelta(sol.t,'ms') ,
+                          [sec, pos])
         df.columns.names = ['Section','Position (μm)']
-        df.index.name='Time (ms)'
+        df.index.name='Time'
         self.V = df + self.N.V_ref
         self.truc = sol
         #sec,pos = self.N.indexS()
-        df = pd.DataFrame(sol.y[self.idS,:].T , sol.t )#,[sec, pos * 1E6])
+        df = pd.DataFrame(sol.y[self.idS,:].T ,
+                          pd.to_timedelta(sol.t,'ms') )#,[sec, pos * 1E6])
         #df.columns.names = ['Section','Channel','Variable,''Position (μm)']
-        df.index.name='Time (ms)'
+        df.index.name='Time'
         self.S=df
 
 
 
-    @jit
+
     def ode_function(y,t,idV,idS,Cm,G,k_c,neuron):
         """this function express the ode problem :
         dy/dt = f(y)
@@ -107,3 +113,6 @@ class Simulation:
         #dC = (Gk * C) @ V + J + D @ C TODO
         #return np.concatenate([dVi,dVo,dS,dC])
         return np.concatenate([dVi,dVo,dS])
+
+    def resample(self,freq):
+        self.V=self.V.resample(freq).mean()
