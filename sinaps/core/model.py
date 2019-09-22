@@ -158,7 +158,7 @@ class Section:
 
     ## Simulation functions
 
-    @jit
+
     def I(self,V,S,t):
         """return the transmembrane current"""
         I= np.zeros(V.shape)
@@ -173,7 +173,7 @@ class Section:
 
         return I
 
-    @jit
+
     def dS(self,V,S):
         """return the differential of the state variables of the ion channels"""
         dS = np.zeros(S.shape)
@@ -404,7 +404,7 @@ class Neuron:
         return S0
 
 
-    @jit
+
     def I(self,V,S,t):
         """return the transmembrane current towards inside"""
         I= np.zeros(self.nb_comp)
@@ -413,7 +413,7 @@ class Neuron:
         return I
 
 
-    @jit
+
     def dS(self,V,S):
         """return the differential of the state variables of the ion channels"""
         dS = np.zeros_like(S)

@@ -39,7 +39,7 @@ class ConstantCurrent(Channel):
         super().__init__()
         self.current = current
 
-    @jit
+
     def I(self,V,*args):
         return self.current
 
@@ -58,7 +58,7 @@ class HeavysideCurrent(Channel):
         self.t0= t0
         self.tf = tf
 
-    @jit
+
     def I(self,V,S,t):
         if t <= self.tf and t >= self.t0:
             I = self.current
@@ -79,7 +79,7 @@ class LeakChannel(Channel):
         self.Veq = Veq
         self.R_m = R_m * 100 # conversion to GΩ.μm2: 1 kΩ.cm2 = 100 GΩ.μm2
 
-    @jit
+
     def I(self,V,*args):
         """
         Return the net surfacic current [pA/um2] of the mechanism towards inside
@@ -109,7 +109,7 @@ class Hodgkin_Huxley(Channel):
         self.gL = gL / 100 # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
         self.V_L = V_L
 
-    @jit
+
     def I(self,V,n,t):
         """
         Return the net surfacic current [pA/um2] of the mechanism towards inside
@@ -123,7 +123,7 @@ class Hodgkin_Huxley(Channel):
         I_L = self.gL * (V - self.V_L)
         return - I_Na - I_K - I_L
 
-    @jit
+
     def dS(self, V, n):
         dn = 0.1 * (1 - 0.1 * V) * (1-n)/(np.exp(1-0.1*V)-1) - 0.125 * np.exp(-V/80)*n
         return dn
@@ -146,7 +146,7 @@ class Hodgkin_Huxley_Ca(Channel):
         self.gCa = gCa / 100 # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
         self.V_Ca = V_Ca
 
-    @jit
+
     def I(self,V,m,h,t):
         """
         Return the net surfacic current [pA/um2] of the mechanism towards inside
@@ -154,7 +154,7 @@ class Hodgkin_Huxley_Ca(Channel):
         I_Ca = self.gCa * m**3 * h * (V - self.V_Ca)
         return -I_Ca
 
-    @jit
+
     def dS(self, V, m, h):
         dm = 1/1.3 * (1/(1 + np.exp(-V+102)) - m)
         dh = 1/10 * (1/(1 + np.exp(-V+24)) - h)
