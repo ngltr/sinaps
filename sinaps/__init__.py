@@ -1,3 +1,3 @@
-from neusim.core.model import Section, Neuron, Ion, Channel
-from neusim.core.simulation import Simulation
-import neusim.channels
+from sinaps.core.model import Section, Neuron, Ion, Channel
+from sinaps.core.simulation import Simulation
+import sinaps.channels

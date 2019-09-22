@@ -2,8 +2,8 @@
 import numpy as np
 from numba import jit
 
-from neusim.core.model import Channel
-from neusim.ions import ion_Ca
+from .core.model import Channel
+from .ions import ion_Ca
 
 ion_Ca
 
