@@ -58,17 +58,17 @@ class Simulation:
 
         sec,pos = self.N.indexV()
         df = pd.DataFrame(sol.y[:self.N.nb_comp,:].T ,
-                          pd.to_timedelta(sol.t,'ms') ,
+                          sol.t ,
                           [sec, pos])
         df.columns.names = ['Section','Position (μm)']
         df.index.name='Time'
         self.V = df + self.N.V_ref
-        self.truc = sol
+        self.sol = sol
         #sec,pos = self.N.indexS()
         df = pd.DataFrame(sol.y[self.idS,:].T ,
-                          pd.to_timedelta(sol.t,'ms') )#,[sec, pos * 1E6])
+                          sol.t )#,[sec, pos * 1E6])
         #df.columns.names = ['Section','Channel','Variable,''Position (μm)']
-        df.index.name='Time'
+        df.index.name='Time (ms)'
         self.S=df
 
 
