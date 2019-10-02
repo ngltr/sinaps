@@ -11,5 +11,8 @@ setuptools.setup(
     install_requires=[
         "numpy",
         "pandas",
+        "quantiphy",
+        "scipy",
+        "matplotlib"
     ],
 )
