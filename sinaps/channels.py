@@ -1,6 +1,6 @@
 # coding: utf-8
 import numpy as np
-from numba import jit
+from quantiphy import Quantity
 
 from .core.model import Channel
 from .ions import ion_Ca
@@ -33,7 +33,7 @@ To implement a channel C, it is necessary to implement  :
 
 class ConstantCurrent(Channel):
     """Point channel with a constant current
-
+       current [pA]
     """
     def __init__(self,current):
         super().__init__()
@@ -42,6 +42,11 @@ class ConstantCurrent(Channel):
 
     def I(self,V,*args):
         return self.current
+
+
+    def __repr__(self):
+        return "ConstantCurrent(I={})".format(
+            Quantity (self.current*1E-12,'A'))
 
 class HeavysideCurrent(Channel):
     """Point channel with a constant current between a time period
@@ -85,6 +90,11 @@ class LeakChannel(Channel):
         Return the net surfacic current [pA/um2] of the mechanism towards inside
         """
         return (self.Veq - V) / self.R_m
+
+    def __repr__(self):
+        return "LeakChannel(Veq={}, R_m={})".format(
+            Quantity (self.Veq*1E-3,'V'),
+            Quantity (self.R_m*1E1,'Ω.cm²'))
 
 
 class Hodgkin_Huxley(Channel):

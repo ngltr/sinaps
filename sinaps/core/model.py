@@ -2,7 +2,6 @@
 import numpy as np
 pi=np.pi
 from quantiphy import Quantity
-from numba import jit
 import pandas as  pd
 
 
@@ -61,12 +60,14 @@ class Section:
 
 
     def __repr__(self):
-        return "Section(name={}, L={}, a={}, C_m={}, R_l={})".format(
+        return """Section(name={}, L={}, a={}, C_m={}, R_l={}, channels : {}, point_channels : {})""".format(
             self.name,
             Quantity (self.L*1E-6,'m'),
             Quantity (self.a*1E-6,'m'),
             Quantity (self.C_m*1E-12,'F/μm²'),
-            Quantity (self.R_l*1E9,'Ω.μm'))
+            Quantity (self.R_l*1E9,'Ω.μm'),
+            [c['obj'] for c in self.channels_c],
+            ['{}:{}'.format(c['pos'],c['obj'])for c in self.channels_p])
     def __str__(self):
         return "Section {}".format(self.name)
 
@@ -278,7 +279,10 @@ class Neuron:
         self._y=None
 
     def __repr__(self):
-        return "Neuron(sections={})".format(self.sections)
+        return "Neuron({})".format(
+            ['{}-{}: {}'.format(s['i'],s['j'],s['obj'].__repr__())
+                for s in self.sections]
+                )
 
 
     def add_section(self,s,i,j):
