@@ -65,7 +65,7 @@ class Section:
             Quantity (self.L*1E-6,'m'),
             Quantity (self.a*1E-6,'m'),
             Quantity (self.C_m*1E-4,'F/cm²'),
-            Quantity (self.R_l*1E5,'Ω.cm'),
+            Quantity (self.R_l*1E5,'Ω.cm')),
             [c['obj'] for c in self.channels_c],
             ['{}:{}'.format(c['pos'],c['obj'])for c in self.channels_p])
     def __str__(self):
