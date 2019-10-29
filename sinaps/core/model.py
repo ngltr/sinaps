@@ -71,6 +71,24 @@ class Section:
     def __str__(self):
         return "Section {}".format(self.name)
 
+    def _repr_markdown_(self):
+        return """Section **{}**
++ L: {}
++ a: {}
++ C_m: {}
++ R_l: {}
++ channels: {}
++ point_channels: {}""".format(
+            self.name,
+            Quantity (self.L*1E-6,'m'),
+            Quantity (self.a*1E-6,'m'),
+            Quantity (self.C_m*1E-12,'F/μm²'),
+            Quantity (self.R_l*1E9,'Ω.μm'),
+            '\n  + '.join([str(c['obj']) for c in self.channels_c]),
+            '\n  + '.join(['{}:{}'.format(c['pos'],c['obj'])for c in self.channels_p])
+            )
+
+
     def __copy__(self):
         return Section(self.name)
 
