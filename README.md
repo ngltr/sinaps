@@ -1,3 +1,3 @@
 # SiNAPS
 
-Simulation Neuronale Analyse de Propagation du Signal
+Simulation Neuronale et Analyse de la Propagation du Signal
