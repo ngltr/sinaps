@@ -65,8 +65,8 @@ class Section:
             self.name,
             Quantity (self.L*1E-6,'m'),
             Quantity (self.a*1E-6,'m'),
-            Quantity (self.C_m*1E-12,'F/μm²'),
-            Quantity (self.R_l*1E9,'Ω.μm'))
+            Quantity (self.C_m*1E-4,'F/cm²'),
+            Quantity (self.R_l*1E5,'Ω.cm'))
     def __str__(self):
         return "Section {}".format(self.name)
 
