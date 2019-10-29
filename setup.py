@@ -13,6 +13,8 @@ setuptools.setup(
         "pandas",
         "quantiphy",
         "scipy",
-        "matplotlib"
+        "matplotlib",
+        "pandas_bokeh",
+        "bokeh"
     ],
 )
