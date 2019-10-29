@@ -4,7 +4,7 @@ from sinaps.core.simulation import Simulation
 
 from sinaps.gui.graph import NeuronView
 
-import sinaps.channels
+import sinaps.channels as channels
 
 class Neuron(_Neuron):
     def __init__(self):
