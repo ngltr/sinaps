@@ -75,14 +75,14 @@ class LeakChannel(Channel):
     """Leak channel
         I = (V-Veq) / Rm
     """
-    def __init__(self,Veq=0,R_m=28):
+    def __init__(self,Veq=0,G_m=0.3):
         """
             Veq : [mV] Equilibrium potential for the leak channel
-            R_m : [kOhm.cm2] Resistance of the menbrane (leak channel)
+            G_m : [mS/cm2] Resistance of the menbrane (leak channel)
         """
         super().__init__()
         self.Veq = Veq
-        self.R_m = R_m * 100 # conversion to GΩ.μm2: 1 kΩ.cm2 = 100 GΩ.μm2
+        self.R_m = 1/G_m * 100 # conversion to GΩ.μm2: 1/(1 mS/cm2) = 100 GΩ.μm2
 
 
     def I(self,V,*args):
@@ -92,9 +92,9 @@ class LeakChannel(Channel):
         return (self.Veq - V) / self.R_m
 
     def __repr__(self):
-        return "LeakChannel(Veq={}, R_m={})".format(
+        return "LeakChannel(Veq={}, G_m={})".format(
             Quantity (self.Veq*1E-3,'V'),
-            Quantity (self.R_m*1E1,'Ω.cm²'))
+            Quantity (1/self.R_m*1E-1,'S/cm²'))
 
 
 class Hodgkin_Huxley(Channel):
