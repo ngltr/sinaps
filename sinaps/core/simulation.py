@@ -8,6 +8,7 @@ from scipy.integrate import solve_ivp
 from scipy.sparse import csr_matrix
 from numba import jit
 
+from tqdm import tqdm
 
 
 class Simulation:
@@ -29,7 +30,7 @@ class Simulation:
         self.N = deepcopy(neuron)
         self.idV,idS0 = self.N.init_sim(dx)
         self.idS = idS0 + self.idV[-1] + 1
-        self.Cm = self.N.capacitance_array()
+        self.Cm1 = 1/self.N.capacitance_array()
         self.G = csr_matrix(self.N.conductance_mat())#sparse matrix format for
                                                      #efficiency
         self.k_c = csr_matrix(self.N.connection_mat())
@@ -47,14 +48,16 @@ class Simulation:
         t : array
         A sequence of time points (ms) for which to solve the system
         """
+        tq=tqdm(total=t_span[1]-t_span[0],unit='ms')
         sol=solve_ivp(lambda t, y:Simulation.ode_function(y,t,self.idV,self.idS,
-                                                self.Cm,self.G,self.k_c,self.N),
+                                                self.Cm1,self.G,self.k_c,self.N,
+                                                tq,t_span),
                       t_span,
                       self.V_S0,
                       method=method,
                       atol = self.atol,
                        **kwargs)
-
+        tq.close()
 
         sec,pos = self.N.indexV()
         df = pd.DataFrame(sol.y[:self.N.nb_comp,:].T ,
