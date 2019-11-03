@@ -301,7 +301,14 @@ class Neuron:
             ['{}-{}: {}'.format(s['i'],s['j'],s['obj'].__repr__())
                 for s in self.sections]
                 )
+    def __len__(self):
+        return len(self.sections)
 
+    def __getitem__(self,key):
+        return self.sections[key]['obj']
+
+    def __setitem__(self,key,value):
+        self.sections[key]['obj']=value
 
     def add_section(self,s,i,j):
         """Connect nodes
