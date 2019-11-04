@@ -75,9 +75,7 @@ class Simulation:
         self.S=df
 
 
-
-
-    def ode_function(y,t,idV,idS,Cm,G,k_c,neuron):
+    def ode_function(y,t,idV,idS,Cm1,G,k_c,neuron,tq=None,t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
 
@@ -88,7 +86,7 @@ class Simulation:
                     m the total number of connecting nodes
         S=y[idS] : other states variables related to the ion channels
 
-        Cm : Capacitance of the membrane for each compartiment size n
+        Cm1 : Inverse of the capacitance of the membrane for each compartiment size n
         G : Conductance matrix size n * n+m
         k_c : Connection matrix size m * n
 
@@ -103,11 +101,15 @@ class Simulation:
         neuron : type Neuron contains the information about the behaviour
          of the ion channels in order to compute I
         """
+        if not (tq is None):
+            n=round(t-t_span[0],3)
+            if n>tq.n:
+                tq.update(n-tq.n)
 
         V = y[idV]
         S = y[idS]
         I = neuron.I(V, S, t) #current of active ion channels from outisde to inside
-        dVi = 1/Cm * (G @ V + I) #dV/dt for  compartiment
+        dVi = Cm1 * (G @ V + I) #dV/dt for  compartiment
         dVo = k_c @ dVi #dV/dt for connecting nodes
         dS = neuron.dS(V,S)
 
