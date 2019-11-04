@@ -3,11 +3,9 @@ import numpy as np
 from quantiphy import Quantity
 
 from .core.model import Channel
-from .ions import ion_Ca
-
-ion_Ca
 
 
+from numba import jit
 
 """
 Units :
@@ -124,13 +122,19 @@ class Hodgkin_Huxley(Channel):
         """
         Return the net surfacic current [pA/um2] of the mechanism towards inside
         """
+        return Hodgkin_Huxley._I(V,n,t,
+                        self.gNa,self.V_Na,self.gK,self.V_K,self.gL,self.V_L)
+
+    @staticmethod
+    @jit
+    def _I(V,n,t,gNa,V_Na,gK,V_K,gL,V_L):
         alpha_m = (2.5-0.1*V)/(np.exp(2.5-0.1*V)-1)
         beta_m = 4*np.exp(-V/18)
         m = alpha_m/(alpha_m + beta_m);
         h = 0.89 - 1.1 * n
-        I_Na = self.gNa * m**3 * h * (V -  self.V_Na)
-        I_K = self.gK * n**4 * (V - self.V_K)
-        I_L = self.gL * (V - self.V_L)
+        I_Na = gNa * m**3 * h * (V -  V_Na)
+        I_K = gK * n**4 * (V - V_K)
+        I_L = gL * (V - V_L)
         return - I_Na - I_K - I_L
 
 
