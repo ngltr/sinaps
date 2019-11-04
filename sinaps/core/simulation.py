@@ -119,5 +119,55 @@ class Simulation:
         #return np.concatenate([dVi,dVo,dS,dC])
         return np.concatenate([dVi,dVo,dS])
 
+    def ode_diff_function(y,t,idV,idS,Cm,D,k_c,neuron):
+        """this function express the ode problem :
+        dy/dt = f(y)
+
+        y is a vector containing all state variables of the problem
+
+        C=y[idC] : concentration of each node
+                    size n + m where n is the total number of compartiment and
+                    m the total number of connecting nodes
+        S=y[idS] : other states variables related to the ion channels
+
+
+        D : Electrodiffusion matrix size n * n+m
+        k_c : Connection matrix size m * n
+
+
+        Concentration equation  for compartiment is given by :
+        dC/dt = 1/Cm (D V + Jc )
+
+        Concentration equation for connecting nodes linearly dependent of
+        compartment nodes:
+        dC/dt = k_c.dC
+
+        neuron : type Neuron contains the information about the behaviour
+         of the ion channels in order to compute J
+        """
+
+        C = y[idC]
+
+
+        #D = D V
+
+        dC = D @ C + J
+
+
+
+        S = y[idS]
+        I = neuron.I(V, S, t) #current of active ion channels from outisde to inside
+        dVi = 1/Cm * (G @ V + I) #dV/dt for  compartiment
+        dVo = k_c @ dVi #dV/dt for connecting nodes
+        dS = neuron.dS(V,S)
+
+        #electrodiffusion equation
+        #C = y[idC]TODO
+
+        #return np.concatenate([dVi,dVo,dS,dC])
+        return np.concatenate([dVi,dVo,dS])
+
+
+
     def resample(self,freq):
         self.V=self.V.resample(freq).mean()
