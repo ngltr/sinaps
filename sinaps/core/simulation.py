@@ -148,8 +148,9 @@ class Simulation:
 
         C = y[idC]
 
-
-        #D = D V
+        V=interpolate.interp1d(sim.sol.t,sim.sol.y)
+        
+        D = neuron.difus_mat(k,ion,V,t)
 
         dC = D @ C + J
 
