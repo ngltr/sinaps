@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="SiNAPS",
-    version="0.0.1",
+    version="0.0.2",
     author="Claire Guerrier",
     author_email="claire.guerrier@univ-cotedazur.fr",
     description="Neuronal simulation package",
@@ -15,6 +15,7 @@ setuptools.setup(
         "scipy",
         "matplotlib",
         "pandas_bokeh",
-        "bokeh"
+        "bokeh",
+        "tqdm",
     ],
 )
