@@ -1,7 +1,7 @@
 from sinaps.core.model import Section, Ion, Channel
 from sinaps.core.model import Neuron as _Neuron
 from sinaps.core.simulation import Simulation as _Simulation
-import sinaps.ions
+import sinaps.ions as ions
 
 from sinaps.gui.graph import NeuronView, SimuView
 

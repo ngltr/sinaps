@@ -4,6 +4,7 @@ from quantiphy import Quantity
 
 from .core.model import Channel
 
+from .ions import Ca
 
 from numba import jit
 
@@ -38,7 +39,7 @@ class ConstantCurrent(Channel):
         self.current = current
 
 
-    def I(self,V,*args):
+    def I(self,V,S,t):
         return self.current
 
 
@@ -83,7 +84,7 @@ class LeakChannel(Channel):
         self.R_m = 1/G_m * 100 # conversion to GΩ.μm2: 1/(1 mS/cm2) = 100 GΩ.μm2
 
 
-    def I(self,V,*args):
+    def I(self,V,S,t):
         """
         Return the net surfacic current [pA/um2] of the mechanism towards inside
         """
@@ -167,6 +168,15 @@ class Hodgkin_Huxley_Ca(Channel):
         """
         I_Ca = self.gCa * m**3 * h * (V - self.V_Ca)
         return -I_Ca
+
+    def J(self,ion,V,m,h,t):
+        """
+        Return the flux of ion [aM/ms/um2] of the mechanism towards inside
+        """
+        if ion is Ca:
+            return self.I(V,m,h,t)/96.48533132838746 
+        else:
+            return 0 * V
 
 
     def dS(self, V, m, h):

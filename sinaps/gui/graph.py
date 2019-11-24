@@ -22,25 +22,30 @@ class SimuView:
     def __init__(self, simu):
         self.simu=simu
 
-    def _meshgrid(self,n):
-        y=self.simu.sol.t
+    def _meshgrid(self,ion,n):
+
         x=self.simu.N.indexV_flat()
+        if ion is None:
+            sol=self.simu.sol
+        else:
+            sol=self.simu.sol_diff[ion]
+        y=sol.t
         V=interpolate.interp2d(x,y,
-            self.simu.sol.y[:self.simu.N.nb_comp,:].reshape(-1))
+            sol.y[:self.simu.N.nb_comp,:].reshape(-1))
         X = np.arange(x[0], x[-1], (x[-1]-x[0])/n )
         Y = np.arange(y[0], y[-1], (y[-1]-y[0])/n )
         X2, Y2 = np.meshgrid(X, Y)
         Z = V(X,Y)
         return X2,Y2,Z
 
-    def graph2D(self,figsize=(10,10),**kwargs):
-        X,Y,Z = self._meshgrid(1000)
+    def graph2D(self,figsize=(10,10),ion=None,**kwargs):
+        X,Y,Z = self._meshgrid(ion,1000)
         fig = plt.figure(figsize=figsize,**kwargs)
         fig.gca().matshow(Z.T)
 
 
-    def graph3D(self):
-        X,Y,Z = self._meshgrid(100)
+    def graph3D(self,ion=None):
+        X,Y,Z = self._meshgrid(ion,100)
         source = ColumnDataSource(data=dict(x=X/1000, y=Y, z=Z))
         surface = Surface3d(x="x", y="y", z="z",
         data_source=source, width=1000, height=1000)

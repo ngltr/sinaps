@@ -5,18 +5,19 @@ import numpy as np
 pi=np.pi
 from quantiphy import Quantity
 import pandas as  pd
-
-
+from scipy.sparse import dia_matrix
+from scipy import interpolate
 """
 Units :
 
-Voltage : mV
-Time : ms
-Distance : μm
-Resistance : GΩ
-Conductance : nS
-Capacitance : pF
-Current : pA
+Voltage : mV (E-3)
+Time : ms (E-3)
+Distance : μm (E-6)
+Resistance : GΩ (E9)
+Conductance : nS (E-9)
+Capacitance : pF (E-12)
+Current : pA (E-12)
+Mol :aM (E-18)
 
 """
 
@@ -25,7 +26,7 @@ Current : pA
 class Section:
     """This class representss a section of neuron with uniform physical values
     """
-    def __init__(self, L=100, a=1, C_m=1, R_l=150, V0=0, name=None):
+    def __init__(self, L=100, a=1, C_m=1, R_l=150, V0=0, name=None, C0=None):
         """
             S=Section(L : length [μm],
                       a : radius [μm],
@@ -33,6 +34,7 @@ class Section:
                       R_l : longitudinal resistance [Ohm.cm]
                       [V0]=0 : initial potential (mV)
                       [name],
+                      [C0]={} : initial concentration for ions (mM/L),
                       )
 
             resistance and capacitance given per membrane-area unit
@@ -42,6 +44,9 @@ class Section:
         self.C_m = C_m/100  # conversion to pF/μm2: 1 μF/cm2 = 0.01 pF/μm2
         self.R_l = R_l/1E5 # conversion to GΩ.μm: 1 Ω.cm = E-5 GΩ.μm
         self.V0 = V0
+        if C0 is None:
+            C0={}
+        self.C0 = C0
         self.channels_c = list()#density channels
         self.channels_p = list()#point channels
         if name is None:
@@ -136,18 +141,35 @@ class Section:
             c['idS']=idS0 + np.array(range(nv),int)
             idS0 +=  nv # * state variables
         for c in self.channels_p:
-            c['idV']=min(c['pos'] * n, n-1)#index of the compartment related to the point process
+            c['idV']=int(min(c['pos'] * n, n-1))#index of the compartment related to the point process
             c['idS']=idS0 + np.array(range(c['obj'].nb_var),int)
             idS0 += c['obj'].nb_var # * state variables
 
         self.idS = np.array(range(idS0),int)
         return self.idV,self.idS
 
+    def continuous(self,param):
+        if callable(param):
+            return np.vectorize(param)
+        elif type(param) is list:
+            return interpolate.interp1d([0,self.L],param)
+        else:
+            return lambda x:param*np.ones_like(x)
+
+    def param_array(self,param):
+        return self.continuous(param)(self.x)
+
+    def param_array_diff(self,param):
+        return self.continuous(param)((self.x[:-1]+self.x[1:])/2)
+
+    def param_array_end(self,param):
+        return self.continuous(param)([self.x[0]/2,(self.L + self.x[-1])/2])
+
     def V0_array(self):
         """Return the initial potential for each nodes
         init_sim(dx) must have been previously called
         """
-        return np.ones_like(self.x) * self.V0 #[mV]
+        return self.param_array(self.V0) #[mV]
 
     def S0_array(self):
         """Return the resting potential for each nodes
@@ -160,12 +182,27 @@ class Section:
                 S0[c['idS']] = c['obj'].__S0(len(self.x))
         return S0
 
+    def C0_array(self,ion):
+        """Return the initial concentration for each nodes
+        init_sim(dx) must have been previously called
+        """
+        return self.param_array(self.C0[ion]) #[mM/L]
+        #TODO Error message if concentration not defined
+
+
     def c_m_array(self):
         """Return the membrane capacitance for each nodes
         init_sim(dx) must have been previously called
         """
         # np.diff(self.xb) = size of compartiment
-        return np.diff(self.xb) * self.c_m #[nF]
+        return np.diff(self.xb) * self.param_array(self.c_m) #[nF]
+
+    def volume_array(self):
+        """Return the volume of each nodes
+        init_sim(dx) must have been previously called
+        """
+        # np.diff(self.xb) = size of compartiment
+        return np.diff(self.xb) * self.param_array(self.a) #[um3]
 
 
 
@@ -174,7 +211,7 @@ class Section:
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
-        return np.diff(self.x) *  self.r_l  #[MΩ]
+        return np.diff(self.x) *  self.param_array_diff(self.r_l)  #[MΩ]
 
     def r_l_end(self):
         """Return the longitunal resistance between the start/end of the section
@@ -182,32 +219,38 @@ class Section:
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
-        return np.array([self.x[0],(self.L - self.x[-1])]) *  self.r_l  #[MΩ]
+        return np.array([self.x[0],(self.L - self.x[-1])]) \
+                *  self.param_array_end(self.r_l)  #[MΩ]
 
     #Diffusion functions
 
     def difus_array(self,ion):
         """Return the diffusion coefficient D*a/dx between each node for ion
+        unit μm^3/ms
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
         if ion in self.D:
-            D=self.D[ion]
+            D=self.D[ion]#[μm^2/ms]
         else:
              D=ion.D
-        return D * (pi * self.a**2) / np.diff(self.x)  #[μm^3/ms]
+        return self.param_array_diff(D) * (pi * self.param_array_diff(self.a)**2)\
+                / np.diff(self.x)  #[μm^3/ms]
 
     def difus_end(self,ion):
         """Return the diffusion coefficient D*a/dx betweenthe start/end of the section
         and the first/last node for ion
+        unit μm^3/ms
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
         if ion in self.D:
-            D=self.D[ion]
+            D=self.D[ion]#[μm^2/ms]
         else:
              D=ion.D
-        return D * (pi * self.a**2) / np.array([self.x[0],(self.L - self.x[-1])])  #[μm^3/ms]
+        return self.param_array_end(D)  \
+                *(pi * self.param_array_end(self.a)**2) \
+                / np.array([self.x[0],(self.L - self.x[-1])])  #[μm^3/ms]
 
     ## Simulation functions
 
@@ -236,6 +279,21 @@ class Section:
                     dS[c['idS']] = c['obj'].__dS(V,S[c['idS']])
         return dS
 
+    def J(self,ion,V,S,t):
+        """return the transmembrane flux of ion ion (aM/ms attoMol)
+         towards inside"""
+        J = np.zeros(V.shape)
+        #continuous channels
+        for c in self.channels_c:
+            J += c['obj'].__J(ion,V,S[c['idS']],t)\
+                 * self.dx * 2 * pi * self.a
+            #todo taking into account variable radius
+
+        #point channels
+        for c in self.channels_p:
+            J[c['idV']] += c['obj'].__J(ion,V[c['idV']],S[c['idS']],t)
+
+        return J
 
 
     ## Save results functions
@@ -267,6 +325,9 @@ class Channel:
     def I(self,V,*st_vars,t):
         return 0 * V
 
+    def J(self,ion,V,*st_vars,t):
+        return 0 * V
+
     def dS(self,V,*st_vars):
         return [0] * self.nb_var
 
@@ -287,7 +348,15 @@ class Channel:
             st_vars=[S[k*n:k*n+n] for k in range(self.nb_var)]
             return self.I(V,*st_vars,t)
         else:
-            return self.I(V,S,t)
+            return self.I(V,S,t=t)
+
+    def _Section__J(self,ion,V,S,t):
+        if self.nb_var > 1:
+            n=len(V)
+            st_vars=[S[k*n:k*n+n] for k in range(self.nb_var)]
+            return self.J(ion,V,*st_vars,t)
+        else:
+            return self.J(ion,V,S,t=t)
 
     def _Section__dS(self,V,S):
         if self.nb_var > 1:
@@ -395,6 +464,19 @@ class Neuron:
 
         return Cm
 
+    def volume_array(self):
+        """Return the volume of each nodes
+        init_sim(dx) must have been previously called
+        """
+        if self.dx is None:
+            raise Neuron.spatialError
+
+        V = np.zeros(self.nb_comp)
+        for s in self.sections:
+            V[s['idV']] = s['obj'].volume_array()
+
+        return V
+
     def conductance_mat(self):
         """Return conductance matrix G of the neuron
         G is a sparse matrix
@@ -473,11 +555,25 @@ class Neuron:
             S0[s['idS']]=s['obj'].S0_array()
         return S0
 
+    def C0_array(self,ion):
+        """Return the initial concentration for each nodes
+        init_sim(dx) must have been previously called
+        """
+        if self.dx is None:
+            raise Neuron.spatialError
+
+        C0 = np.zeros_like(self.idV,float)
+        for s in self.sections:
+            C0[s['idV']]=s['obj'].C0_array(ion)
+        C0[-self.nb_con:] = self.connection_mat() @ C0[:-self.nb_con]
+        return C0
+
     #Diffusion functions
 
-    @lru_cache(1)
+    #@lru_cache(1)
     def difus_array(self,ion):
         """Return the diffusion coefficient D*a/dx between each node for ion
+        unit μm^3/ms
         init_sim(dx) must have been previously called
         """
         if self.dx is None:
@@ -485,10 +581,11 @@ class Neuron:
         cc=np.concatenate
         return cc([ cc([[0],s['obj'].difus_array(ion)]) for s in self.sections])
 
-    @lru_cache(1)
+    #@lru_cache(1)
     def difus_end(self,ion):
         """Return the diffusion coefficient D*a/dx betweenthe start/end of the section
         and the first/last node for ion
+        unit μm^3/ms
         init_sim(dx) must have been previously called
         """
         if self.dx is None:
@@ -498,28 +595,41 @@ class Neuron:
                     #return the firs node of all section first
                     #then the last node of all sections
 
-    @lru_cache(128)
-    def difus_mat(self,k,ion,V,t):
-        """Return the electrodiffusion matrix for ion for potential V and time t
+
+    def difus_mat(self,T,ion,Vt):
+        """Return the electrodiffusion matrix for :
+        - the ion *ion* type sinaps.Ion
+        - potential *V* [mV] for each compartment
+        - Temperature *T* [K]
+
         init_sim(dx) must have been previously called
         """
+        cc=np.concatenate
         if self.dx is None:
             raise Neuron.spatialError
         n = self.nb_comp
         m = self.nb_con
 
-        Vt=V(t)
         Vtt=Vt[1:]-Vt[:-1]
 
+        #e=1.6021766208e-19 A.s electron charge
+        #e=1.6021766208e-4 pA.ms
+        #kb=1.38064852e-23 J.K-1 = Ω.A^2.s Boltzman constant
+        #kb=1.38064852e-05 GΩ.pA^2.ms
+        #e/kb=11.6045 1/(pA.GΩ)=mV^-1
+        #k=ez/kbT
+        k=11.6045*ion.charge/T
+
+
         #flux inside a section
-        d=np.resize(self.difus_array(ion),n+m-1)
+        d=np.resize(self.difus_array(ion),n+m)#[μm^3/ms]
         j=dia_matrix((
-        np.array([cc([[0],d*(1-k/2*Vtt)]),
-              cc([d*(-1-k/2*Vtt),[0]
+        np.array([cc([[0],d[1:]*(1+k/2*Vtt)]),
+              cc([d[1:]*(-1+k/2*Vtt),[0]
                  ])]),
                  [0,-1]),shape=(n+1,n+m)).tolil()
         j[-1]=0 # No flux for last compartiment
-        jtt=(j[1:]-j[:-1]).tolil() # flux difference
+        jtt=(j[1:]-j[:-1]).tolil() # flux difference [μm^3/ms]
 
         #flux for connecting nodes
         d_end=self.difus_end(ion)
@@ -528,13 +638,13 @@ class Neuron:
         idB=cc([[s['i']+n for s in self.sections],
                 [s['j']+n for s in self.sections]])
         Vttk=k/2*(Vt[idA] - Vt[idB])
-        jtt[idA,idB] =  d_end*(1+Vttk)
-        jtt[idA,idA] +=  d_end*(-1+Vttk)
-    return jtt
+        jtt[idA,idB] =  d_end*(1-Vttk)
+        jtt[idA,idA] +=  d_end*(-1-Vttk)
+        return jtt #[μm^3/ms]
 
     def I(self,V,S,t):
         """return the transmembrane current towards inside"""
-        I= np.zeros(self.nb_comp)
+        I = np.zeros(self.nb_comp)
         for s in self.sections:
             I[s['idV']] = s['obj'].I( V[s['idV']], S[s['idS']],t)
         return I
@@ -549,6 +659,13 @@ class Neuron:
         return dS
 
 
+    def J(self,ion,V,S,t):
+        """return the transmembrane flux of ion ion (aM/ms attoMol)
+         towards inside"""
+        J = np.zeros(self.nb_comp)
+        for s in self.sections:
+            J[s['idV']] = s['obj'].J(ion, V[s['idV']], S[s['idS']],t)
+        return J
 
 
 
