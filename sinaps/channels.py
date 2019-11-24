@@ -47,6 +47,22 @@ class ConstantCurrent(Channel):
         return "ConstantCurrent(I={})".format(
             Quantity (self.current*1E-12,'A'))
 
+class CustomCurrent(Channel):
+    """Point channel with a custom current
+        curent is a function f(t) with t in ms
+       current [pA]
+    """
+    def __init__(self,current):
+        super().__init__()
+        self.current = current
+
+    def I(self,V,S,t):
+        return self.current(t)
+
+    def __repr__(self):
+        return "CustomCurrent(I={})".format(self.current)
+
+
 class HeavysideCurrent(Channel):
     """Point channel with a constant current between a time period
 
