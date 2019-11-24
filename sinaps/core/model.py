@@ -20,12 +20,19 @@ Current : pA (E-12)
 Mol :aM (E-18)
 
 """
-
+class InitialConcentrationError(ValueError):
+    def __init__(self, ion):
+        super().__init__(
+            """No initial concentration defined for the ion {}
+               define it using [section].C0=dict([ion]=[initial_concentration])
+                    """.format(ion))
 
 
 class Section:
     """This class representss a section of neuron with uniform physical values
     """
+
+
     def __init__(self, L=100, a=1, C_m=1, R_l=150, V0=0, name=None, C0=None):
         """
             S=Section(L : length [μm],
@@ -186,8 +193,10 @@ class Section:
         """Return the initial concentration for each nodes
         init_sim(dx) must have been previously called
         """
-        return self.param_array(self.C0[ion]) #[mM/L]
-        #TODO Error message if concentration not defined
+        if ion in self.C0:
+            return self.param_array(self.C0[ion]) #[mM/L]
+        else:
+            raise InitialConcentrationError(ion)
 
 
     def c_m_array(self):
@@ -544,7 +553,7 @@ class Neuron:
         #resting potential in the model
 
     def S0_array(self):
-        """Return initial stae variable for each nodes
+        """Return initial state variable for each nodes
         init_sim(dx) must have been previously called
         """
         if self.dx is None:
