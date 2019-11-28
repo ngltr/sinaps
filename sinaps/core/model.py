@@ -455,7 +455,7 @@ class Neuron:
         self.nb_con = max([max(s['i'],s['j']) for s in self.sections]) + 1
         #number of connecting nodes
 
-        self.idV = np.array(range(idV0 + self.nb_con),int)
+        self.idV = np.array(range(idV0),int)
         self.idS = np.array(range(idS0),int)
         return self.idV, self.idS
 
@@ -548,7 +548,6 @@ class Neuron:
         V0 = np.zeros_like(self.idV,float)
         for s in self.sections:
             V0[s['idV']]=s['obj'].V0_array()
-        V0[-self.nb_con:] = self.connection_mat() @ V0[:-self.nb_con]
         return V0 - self.V_ref #Conversion of reference potential V=0 for the
         #resting potential in the model
 
@@ -574,7 +573,6 @@ class Neuron:
         C0 = np.zeros_like(self.idV,float)
         for s in self.sections:
             C0[s['idV']]=s['obj'].C0_array(ion)
-        C0[-self.nb_con:] = self.connection_mat() @ C0[:-self.nb_con]
         return C0
 
     #Diffusion functions

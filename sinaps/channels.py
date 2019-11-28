@@ -80,11 +80,7 @@ class HeavysideCurrent(Channel):
 
 
     def I(self,V,S,t):
-        if t <= self.tf and t >= self.t0:
-            I = self.current
-        else :
-            I = 0
-        return I
+        return ((t <= self.tf) & (t >= self.t0)) * self.current
 
 class LeakChannel(Channel):
     """Leak channel
@@ -190,7 +186,7 @@ class Hodgkin_Huxley_Ca(Channel):
         Return the flux of ion [aM/ms/um2] of the mechanism towards inside
         """
         if ion is Ca:
-            return self.I(V,m,h,t)/96.48533132838746 
+            return self.I(V,m,h,t)/96.48533132838746/2
         else:
             return 0 * V
 

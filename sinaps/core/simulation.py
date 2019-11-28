@@ -31,10 +31,11 @@ class Simulation:
         self.idS = idS0 + self.idV[-1] + 1
         self.Cm1 = 1/self.N.capacitance_array()
         self.Vol1 = 1/self.N.volume_array()
-        self.G = csr_matrix(self.N.conductance_mat())#sparse matrix format for
+        G = csr_matrix(self.N.conductance_mat())#sparse matrix format for
                                                      #efficiency
-        self.k_c = csr_matrix(self.N.connection_mat())
-
+        self.k_c = csr_matrix(np.concatenate([np.identity(self.N.nb_comp),
+                                       self.N.connection_mat()]))
+        self.G = G @ self.k_c
         self.V_S0 = np.concatenate([self.N.V0_array(), self.N.S0_array()])
 
         self.ions = 0
@@ -52,7 +53,7 @@ class Simulation:
         """
         tq=tqdm(total=t_span[1]-t_span[0],unit='ms')
         sol=solve_ivp(lambda t, y:Simulation.ode_function(y,t,self.idV,self.idS,
-                                                self.Cm1,self.G,self.k_c,self.N,
+                                                self.Cm1,self.G,self.N,
                                                 tq,t_span),
                       t_span,
                       self.V_S0,
@@ -76,9 +77,13 @@ class Simulation:
         df.index.name='Time (ms)'
         self.S=df
         self.t_span=t_span
+        self.Vt=interpolate.interp1d(self.sol.t,self.sol.y[self.idV],
+                                fill_value='extrapolate')
+        self.St=interpolate.interp1d(self.sol.t,self.sol.y[self.idS],
+                                fill_value='extrapolate')
 
     @staticmethod
-    def ode_function(y,t,idV,idS,Cm1,G,k_c,neuron,tq=None,t_span=None):
+    def ode_function(y,t,idV,idS,Cm1,G,neuron,tq=None,t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
 
@@ -90,8 +95,7 @@ class Simulation:
         S=y[idS] : other states variables related to the ion channels
 
         Cm1 : Inverse of the capacitance of the membrane for each compartiment size n
-        G : Conductance matrix size n * n+m
-        k_c : Connection matrix size m * n
+        G : Conductance matrix size n * n
 
 
         Voltage equation  for compartiment is given by :
@@ -108,8 +112,7 @@ class Simulation:
         V = y[idV]
         S = y[idS]
         I = neuron.I(V, S, t) #current of active ion channels from outisde to inside
-        dVi = Cm1 * (G @ V + I) #dV/dt for  compartiment
-        dVo = k_c @ dVi #dV/dt for connecting nodes
+        dV = Cm1 * (G @ V + I) #dV/dt for  compartiment
         dS = neuron.dS(V,S)
 
         #Progressbar
@@ -118,29 +121,26 @@ class Simulation:
             if n>tq.n:
                 tq.update(n-tq.n)
 
-        return np.concatenate([dVi,dVo,dS])
+        return np.concatenate([dV,dS])
 
 
-    def run_diff(self,ion,temperature=310,method='RK45',atol = 1.49012e-8,**kwargs):
+    def run_diff(self,ion,temperature=310,method='BDF',atol = 1.49012e-8,**kwargs):
         """Run the simulation diffusion for ion ion
         The simulation for the voltage must have been run before
         """
         tq=tqdm(total=self.t_span[1]-self.t_span[0],unit='ms')
-        V=interpolate.interp1d(self.sol.t,self.sol.y[self.idV],
-                                fill_value='extrapolate')
-        S=interpolate.interp1d(self.sol.t,self.sol.y[self.idS],
-                                fill_value='extrapolate')
+
         Simulation._flux.cache_clear()
         Simulation._difus_mat.cache_clear()
 
-        sol=solve_ivp(lambda t, y:Simulation.ode_diff_function(y,t,V,S,
-                                                self.Vol1,self.k_c,self.N,ion,
+        sol=solve_ivp(lambda t, y:self.ode_diff_function(y,t,ion,
                                                 temperature,
                                                 tq,self.t_span),
                       self.t_span,
                       self.N.C0_array(ion),
                       method=method,
                       atol = atol,
+                      jac = lambda t, y:self.jac_diff(y,t,ion,temperature),
                        **kwargs)
         tq.close()
 
@@ -153,8 +153,8 @@ class Simulation:
         self.C[ion] = df
         self.sol_diff[ion] = sol
 
-    @staticmethod
-    def ode_diff_function(C,t,V,S,Vol1,k_c,neuron,ion,T,tq=None,t_span=None):
+
+    def ode_diff_function(self,C,t,ion,T,tq=None,t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
 
@@ -186,12 +186,11 @@ class Simulation:
         """
         #C = y#[ aM/μm^3 = m mol/L] aM : atto(10E-18) mol
 
-        D = Simulation._difus_mat(neuron,T,ion,V,t)#[μm^3/ms]
+        D = self._difus_mat(T,ion,t)#[μm^3/ms]
 
-        J = Simulation._flux(neuron,ion,V,S,t)#[aM/ms]
+        J = self._flux(ion,t)#[aM/ms]
 
-        dCi = Vol1 * (D @ C + J) #[aM/μm^3/ms]
-        dCo = k_c @ dCi #dC/dt for connecting nodes
+        dC = self.Vol1 * ( (D @ self.k_c) @ C + J) #[aM/μm^3/ms]
 
         ### Progressbar
         if not (tq is None):
@@ -199,8 +198,11 @@ class Simulation:
             if n>tq.n:
                 tq.update(n-tq.n)
 
-        return np.concatenate([dCi,dCo])
+        return dC
 
+    def jac_diff(self,C,t,ion,T):
+        D = self._difus_mat(T,ion,t)#[μm^3/ms]
+        return (D @ self.k_c).multiply(self.Vol1) #[aM/μm^3/ms]
 
 
     def resample(self,freq):
@@ -208,9 +210,8 @@ class Simulation:
 
 
     #Caching functions
-    @staticmethod
     @lru_cache(128)
-    def _difus_mat(neuron,T,ion,V,t):
+    def _difus_mat(self,T,ion,t):
         """Return the electrodiffusion matrix for :
         - the ion *ion* type sinaps.Ion
         - potential *V* [mV] for each compartment
@@ -221,11 +222,10 @@ class Simulation:
         #use the caching with lru as this method will be used a lot)
         """
         #We
-        return neuron.difus_mat(T,ion,V(t))
+        return self.N.difus_mat(T,ion,self.k_c @ self.Vt(t))
 
-    @staticmethod
     @lru_cache(128)
-    def _flux(neuron,ion,V,S,t):
+    def _flux(self,ion,t):
         """return the transmembrane flux of ion ion (aM/ms attoMol)
                  towards inside
 
@@ -233,4 +233,4 @@ class Simulation:
         #use the caching with lru as this method will be used a lot)
         """
         #We
-        return neuron.J(ion,V(t),S(t),t)
+        return self.N.J(ion,self.Vt(t),self.St(t),t)
