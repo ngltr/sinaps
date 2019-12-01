@@ -1,7 +1,9 @@
 # coding: utf-8
 from functools import lru_cache
+from copy import deepcopy
 
 import numpy as np
+from numba import njit
 pi=np.pi
 from quantiphy import Quantity
 import pandas as  pd
@@ -81,8 +83,8 @@ class Section:
             Quantity (self.a*1E-6,'m'),
             Quantity (self.C_m*1E-4,'F/cm²'),
             Quantity (self.R_l*1E5,'Ω.cm'),
-            [c['obj'] for c in self.channels_c],
-            ['{}:{}'.format(c['pos'],c['obj'])for c in self.channels_p])
+            [c for c in self.channels_c],
+            ['{}:{}'.format(c.position,c)for c in self.channels_p])
     def __str__(self):
         return "Section {}".format(self.name)
 
@@ -99,8 +101,8 @@ class Section:
             Quantity (self.a*1E-6,'m'),
             Quantity (self.C_m*1E-12,'F/μm²'),
             Quantity (self.R_l*1E9,'Ω.μm'),
-            '\n  + '.join([str(c['obj']) for c in self.channels_c]),
-            '\n  + '.join(['{}:{}'.format(c['pos'],c['obj'])for c in self.channels_p])
+            '\n  + '.join([str(c) for c in self.channels_c]),
+            '\n  + '.join(['{}:{}'.format(c.position,c)for c in self.channels_p])
             )
 
 
@@ -108,52 +110,71 @@ class Section:
         return Section(self.name)
 
 
-    def add_channel_c(self,C):
-        """Add density channels to the section
+    def add_channel(self,C,x=None):
+        """Add channel to the section
         C: type channel
-        the channels are continuous density giving a surfacic current in nA/μm2
+        position : relative position along the section (between 0 and 1),
+        if None (default) the channels is treated as a continuous density channel
+        giving a surfacic current in nA/μm2
         """
-        self.channels_c.append({'obj':C})
+        #TODO copy the objet to avoid sharing same
+        #betwenn several sections
 
-    def add_channel_p(self,C,x):
-        """Add point channels to the section
-        C: type channel
-        x: type float, is the relative position of the channel in the section
-        the channels are point process giving a current in nA
-        """
-        self.channels_p.append({'obj':C,'pos':x})
+        if not issubclass(type(C), Channel):
+            raise ValueError('Must be a channel (sinaps.Channel)')
 
+        if type(C) in [type(c) for c in self.channels]:
+            raise ValueError('Only one channel of type {} per section is authorized'\
+                            .format(type(C)))
 
+        C=deepcopy(C)
+        if x is None:
+            self.channels_c.append(C)
+        else:
+            C.position=x
+            self.channels_p.append(C)
 
+    @property
+    def channels(self):
+        return self.channels_c + self.channels_p
     ## Initilialisation functions
 
-    def init_sim(self,dx):
-        """Prepare the section to run a simulation with spatial resolution dx
-        if dx = 0 , sec.dx will be use
-
-        """
-        idS0=0
+    def gen_comp(self,dx):
+        """ if dx = 0 , sec.dx will be use """
         if dx > 0:
             self.dx=dx
         try:
-            n=max(int(np.ceil(self.L/self.dx)),2)
+            self.nb_comp=max(int(np.ceil(self.L/self.dx)),2)
         except AttributeError:
             raise ValueError('You must first define dx as a property for each section before using dx=0')
-        self.dx=self.L/n
-        self.x=np.linspace(self.dx/2,self.L-self.dx/2,n)##center of the compartiment, size n
-        self.xb=np.linspace(0,self.L,n+1)##border of the compartiment, size n+1
-        self.idV=np.array(range(n),int)
-        for c in self.channels_c:
-            nv = c['obj'].nb_var * n
-            c['idS']=idS0 + np.array(range(nv),int)
-            idS0 +=  nv # * state variables
-        for c in self.channels_p:
-            c['idV']=int(min(c['pos'] * n, n-1))#index of the compartment related to the point process
-            c['idS']=idS0 + np.array(range(c['obj'].nb_var),int)
-            idS0 += c['obj'].nb_var # * state variables
 
-        self.idS = np.array(range(idS0),int)
-        return self.idV,self.idS
+        return self.nb_comp
+
+    def init_sim(self,idV0,idS00):
+        """Prepare the section to run a simulation with spatial resolution dx
+        gen_comp must have been run before
+        idV0 : first indices for Voltage
+        idS00 : first indice for state variables
+        """
+
+
+        n = self.nb_comp
+        self.dx = self.L/n
+        self.x = np.linspace(self.dx/2,self.L-self.dx/2,n)##center of the compartiment, size n
+        self.xb = np.linspace(0,self.L,n+1)##border of the compartiment, size n+1
+        self.idV = idV0 + np.array(range(n),int)
+        idS0=idS00
+        for c in self.channels_c:
+            c.idS = [k*n + idS0 + np.array(range(n),int) for k in range(c.nb_var)]
+            c.idV = self.idV
+            idS0 +=  n * c.nb_var# * state variables
+        for c in self.channels_p:
+            c.idV = idV0 + int(min(c.position * n, n-1))#index of the compartment related to the point process
+            c.idS = [ k + idS0 + np.array([0],int) for k in range(c.nb_var)]
+            idS0 += c.nb_var # * state variables
+        self.nb_var=idS0-idS00
+        return idV0+n,idS0
+
 
     def continuous(self,param):
         if callable(param):
@@ -172,29 +193,28 @@ class Section:
     def param_array_end(self,param):
         return self.continuous(param)([self.x[0]/2,(self.L + self.x[-1])/2])
 
-    def V0_array(self):
-        """Return the initial potential for each nodes
+    def fill_V0_array(self,V0):
+        """fill the initial potential for each nodes
         init_sim(dx) must have been previously called
         """
-        return self.param_array(self.V0) #[mV]
+        V0[self.idV] = self.param_array(self.V0) #[mV]
 
-    def S0_array(self):
-        """Return the resting potential for each nodes
+    def fill_S0_array(self,S0):
+        """fill the initial state variables values for each nodes
         init_sim(dx) must have been previously called
         """
         # np.diff(self.xb) = size of compartiment
-        S0=np.zeros_like(self.idS,float)
-        for c in self.channels_c + self.channels_p:
-            if len(c['idS']):
-                S0[c['idS']] = c['obj'].__S0(len(self.x))
-        return S0
+        for c in self.channels:
+            s0 = c.__S0(len(self.x))
+            for k in range(c.nb_var):
+                S0[c.idS[k]] = s0[k]
 
-    def C0_array(self,ion):
+    def fill_C0_array(self,ion,C0):
         """Return the initial concentration for each nodes
         init_sim(dx) must have been previously called
         """
         if ion in self.C0:
-            return self.param_array(self.C0[ion]) #[mM/L]
+            C0[self.idV] = self.param_array(self.C0[ion]) #[mM/L]
         else:
             raise InitialConcentrationError(ion)
 
@@ -204,7 +224,7 @@ class Section:
         init_sim(dx) must have been previously called
         """
         # np.diff(self.xb) = size of compartiment
-        return self.surface_array() * self.param_array(self.c_m) #[nF]
+        return self.surface_array() * self.param_array(self.C_m) #[nF]
 
     def volume_array(self):
         """Return the volume of each compartment
@@ -226,8 +246,8 @@ class Section:
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
-        return np.diff(self.x) *  self.param_array_diff(self.r_l) \
-                (self.param_array_diff(self.a)**2 *pi)#[MΩ]
+        return np.diff(self.x) *  self.param_array_diff(self.R_l) \
+                /(self.param_array_diff(self.a)**2 *pi)#[MΩ]
 
     def r_l_end(self):
         """Return the longitunal resistance between the start/end of the section
@@ -276,12 +296,12 @@ class Section:
         I= np.zeros(V.shape)
         #continuous channels
         for c in self.channels_c:
-            I += c['obj'].__I(V,S[c['idS']],t) * self.dx * 2 * pi * self.a
+            I[self.idV] += c.__I(V,S,t) * self.dx * 2 * pi * self.a
             #todo taking into account variable radius
 
         #point channels
         for c in self.channels_p:
-            I[c['idV']] += c['obj'].__I(V[c['idV']],S[c['idS']],t)
+            I[self.idV] += c.__I(V,S,t)
 
         return I
 
@@ -334,37 +354,48 @@ class Channel:
        and a function S0 returning a tuple with the initial value for each state
        variable
     """
+    nb_var = 0
+    param_names=()
+    params = {}
 
-    def __init__(self):
-        self.nb_var = 0
+    def I(self,V,*S,t):
+        return self._I(V,*S,t=t,**self.params)
 
-    def I(self,V,*st_vars,t):
+    def J(self,V,*S,t):
+        return self._I(V,*S,t=t,**self.params)
+
+    def dS(self,V,*S,t=0):
+        return self._I(V,*S,t=t,**self.params)
+
+    @staticmethod
+    def _I(V,t):
         return 0 * V
-
-    def J(self,ion,V,*st_vars,t):
+    @staticmethod
+    def _J(ion,V,t):
         return 0 * V
-
-    def dS(self,V,*st_vars):
-        return [0] * self.nb_var
+    @staticmethod
+    def _dS(V,*S,t,**unused):
+        return (0,) * len(S)
 
     def S0(self):
-        return [0] * self.nb_var
+        return (0,) * self.nb_var
 
 
     def _Section__S0(self,n):
-        if self.nb_var > 1:
-            return np.concatenate([[S] *n for S in self.S0()])
-        else:
-            return self.S0()
-
+        if hasattr(self,'position'):
+            n=1
+        try:
+            return [[S] * n for S in self.S0()]
+        except TypeError: # S0 is not iterable
+            return [[self.S0()] * n]
 
     def _Section__I(self,V,S,t):
         if self.nb_var > 1:
             n=len(V)
             st_vars=[S[k*n:k*n+n] for k in range(self.nb_var)]
-            return self.I(V,*st_vars,t)
+            return self._I(V,*st_vars,t)
         else:
-            return self.I(V,S,t=t)
+            return self._I(V,S,t=t)
 
     def _Section__J(self,ion,V,S,t):
         if self.nb_var > 1:
@@ -381,6 +412,13 @@ class Channel:
             return np.concatenate(self.dS(V,*st_vars))
         else:
             return self.dS(V,S)
+
+
+    def density_str(self):
+        if hasattr(self,'position'):
+            return ''
+        else:
+            return '/μm²'
 
 
 class Neuron:
@@ -409,17 +447,17 @@ class Neuron:
 
     def __repr__(self):
         return "Neuron({})".format(
-            ['{}-{}: {}'.format(s['i'],s['j'],s['obj'].__repr__())
+            ['{}-{}: {}'.format(s.i,s.j,s.__repr__())
                 for s in self.sections]
                 )
     def __len__(self):
         return len(self.sections)
 
     def __getitem__(self,key):
-        return self.sections[key]['obj']
+        return self.sections[key]
 
     def __setitem__(self,key,value):
-        self.sections[key]['obj']=value
+        self.sections[key]=value
 
     def add_section(self,s,i,j):
         """Connect nodes
@@ -427,11 +465,17 @@ class Neuron:
         With i and j:Int and s:Section
         connect nodes i and j with section s
         """
-        self.sections.append({'i':i,'j':j,'obj':s,'num':len(self.sections)})
+        if not issubclass(type(s), Section):
+            raise ValueError('Must be a section (sinaps.Section)')
+        sec=deepcopy(s)
+        sec.i=i
+        sec.j=j
+        sec.num=len(self.sections)
+        self.sections.append(sec)
 
     @property
     def nb_nodes(self):
-        return max([max(s['i'],s['j']) for s in self.sections])+1
+        return max([max(s.i,s.j) for s in self.sections])+1
 
     @property
     def adj_mat(self):
@@ -439,33 +483,63 @@ class Neuron:
             n=self.nb_nodes
             self.mat = np.ndarray([n,n],Section)
             for s in self.sections:
-                self.mat[s['i'],s['j']]=s['obj']
+                self.mat[s.i,s.j]=s
         return self.mat
 
     def init_sim(self,dx):
         """Prepare the neuron to run a simulation with spatial resolution dx"""
-        idV0=idS0=0
+        self.nb_comp = 0#number of comparment
         self.dx = dx
-        self.idE = np.zeros(len(self))
-        k=0
         for s in self.sections:
-            idV,idS=s['obj'].init_sim(dx)
-            s['idV'] = idV0+idV
-            s['idS'] = idS0+idS
-            idV0 += len(idV)
-            idS0 += len(idS)
-            self.idE[k]=s['idV'][0]
-            k += 1
+            self.nb_comp += s.gen_comp(dx)
 
+        idV0=0
+        idS0=self.nb_comp
+        for s in self.sections:
+            idV0,idS0=s.init_sim(idV0,idS0)
 
-        self.nb_comp = idV0 # total number of compartment
-        self.nb_con = max([max(s['i'],s['j']) for s in self.sections]) + 1
+        self.nb_con = max([max(s.i,s.j) for s in self.sections]) + 1
         #number of connecting nodes
 
         self.idV = np.array(range(idV0),int)
-        self.idS = np.array(range(idS0),int)
+        self.idS = np.array(range(self.nb_comp,idS0),int)
+
         return self.idV, self.idS
 
+    def all_channels(self):
+        """Return channels objects suitable for the simulation"""
+        cch=[]
+        for ch_cls in { type(c)  for s in self for c in s.channels}:
+            ch = SimuChannel(ch_cls)
+            params={ p:[] for p in ch_cls.param_names}
+            idV = []
+            idS = []
+            surface = []
+            for s in self:
+                for c in s.channels:
+                    if type(c) is ch_cls:
+                        for p in params:
+                            if hasattr(c,'position'):
+                                value=c.params[p]
+                            else:
+                                value=s.param_array(c.params[p])
+                            params[p].append(value)
+                        idV.append(c.idV)
+                        idS.append(c.idS)
+                        if hasattr(c,'position'):
+                            surface.append([1])
+                        else:
+                            surface.append(s.surface_array())
+            ch.params = {k:np.hstack(v)[:,np.newaxis] for k,v in params.items()}
+            ch.idV = np.hstack(idV)
+            ch.nb_var = ch_cls.nb_var
+            if ch.nb_var:
+                ch.idS = [np.hstack(idS)[k,:] for k in range(ch.nb_var)]
+            else:
+                ch.idS=[]
+            ch.k= np.concatenate(surface)[:,np.newaxis]
+            cch.append(ch)
+        return cch
 
     def capacitance_array(self):
         """Return the menbrane capacitance for each nodes
@@ -476,7 +550,7 @@ class Neuron:
 
         Cm = np.zeros(self.nb_comp)
         for s in self.sections:
-            Cm[s['idV']] = s['obj'].c_m_array()
+            Cm[s.idV] = s.c_m_array()
 
         return Cm
 
@@ -489,7 +563,7 @@ class Neuron:
 
         V = np.zeros(self.nb_comp)
         for s in self.sections:
-            V[s['idV']] = s['obj'].volume_array()
+            V[s.idV] = s.volume_array()
 
         return V
 
@@ -509,16 +583,16 @@ class Neuron:
 
         for s in self.sections:
             # longitudinal conductance in a section
-            g_l = 1/s['obj'].r_l_array()
-            G[s['idV'][:-1],s['idV'][1:]] = + g_l
-            G[s['idV'][1:],s['idV'][:-1]] = + g_l
-            G[s['idV'][:-1],s['idV'][:-1]] += - g_l
-            G[s['idV'][1:],s['idV'][1:]] +=  - g_l
+            g_l = 1/s.r_l_array()
+            G[s.idV[:-1],s.idV[1:]] = + g_l
+            G[s.idV[1:],s.idV[:-1]] = + g_l
+            G[s.idV[:-1],s.idV[:-1]] += - g_l
+            G[s.idV[1:],s.idV[1:]] +=  - g_l
             #  conductance between connecting nodes and first/last compartment
-            g_end = 1/s['obj'].r_l_end()
+            g_end = 1/s.r_l_end()
             ends = [0,-1]
-            G[s['idV'][ends],[s['i']+n,s['j']+n]] =  + g_end
-            G[s['idV'][ends],s['idV'][ends]] +=  - g_end
+            G[s.idV[ends],[s.i+n,s.j+n]] =  + g_end
+            G[s.idV[ends],s.idV[ends]] +=  - g_end
 
         return G
 
@@ -538,37 +612,35 @@ class Neuron:
         k = np.zeros([self.nb_con, self.nb_comp])
 
         for s in self.sections:
-            g_end = 1/s['obj'].r_l_end()
+            g_end = 1/s.r_l_end()
             # conductance of leak channels
-            k[[s['i'],s['j']],s['idV'][[0,-1]]] = g_end
+            k[[s.i,s.j],s.idV[[0,-1]]] = g_end
         k = k/k.sum(axis=1,keepdims=True)
         return k
 
 
-    def V0_array(self):
-        """Return the initial potential for each nodes
+    def fill_V0_array(self,V0):
+        """fill the initial potential for each nodes
         init_sim(dx) must have been previously called
         """
         if self.dx is None:
             raise Neuron.spatialError
 
-        V0 = np.zeros_like(self.idV,float)
         for s in self.sections:
-            V0[s['idV']]=s['obj'].V0_array()
-        return V0 - self.V_ref #Conversion of reference potential V=0 for the
+            s.fill_V0_array(V0)
+        V0[self.idV] = V0[self.idV] - self.V_ref #Conversion of reference potential V=0 for the
         #resting potential in the model
 
-    def S0_array(self):
-        """Return initial state variable for each nodes
+    def fill_S0_array(self,S0):
+        """fill initial state variable for each nodes
         init_sim(dx) must have been previously called
         """
         if self.dx is None:
             raise Neuron.spatialError
 
-        S0=np.zeros_like(self.idS,float)
         for s in self.sections:
-            S0[s['idS']]=s['obj'].S0_array()
-        return S0
+            s.fill_S0_array(S0)
+
 
     def C0_array(self,ion):
         """Return the initial concentration for each nodes
@@ -579,7 +651,7 @@ class Neuron:
 
         C0 = np.zeros_like(self.idV,float)
         for s in self.sections:
-            C0[s['idV']]=s['obj'].C0_array(ion)
+            s.fill_C0_array(ion,C0)
         return C0
 
     #Diffusion functions
@@ -593,7 +665,7 @@ class Neuron:
         if self.dx is None:
             raise Neuron.spatialError
         cc=np.concatenate
-        return cc([ cc([[0],s['obj'].difus_array(ion)]) for s in self.sections])
+        return cc([ cc([[0],s.difus_array(ion)]) for s in self.sections])
 
     #@lru_cache(1)
     def difus_end(self,ion):
@@ -604,7 +676,7 @@ class Neuron:
         """
         if self.dx is None:
             raise Neuron.spatialError
-        return np.array([s['obj'].difus_end(ion) for s in self.sections])\
+        return np.array([s.difus_end(ion) for s in self.sections])\
                     .swapaxes(0,1).flatten()
                     #return the firs node of all section first
                     #then the last node of all sections
@@ -647,10 +719,10 @@ class Neuron:
 
         #flux for connecting nodes
         d_end=self.difus_end(ion)
-        idA=cc([[s['idV'][0] for s in self.sections],
-                [s['idV'][-1] for s in self.sections]])
-        idB=cc([[s['i']+n for s in self.sections],
-                [s['j']+n for s in self.sections]])
+        idA=cc([[s.idV[0] for s in self.sections],
+                [s.idV[-1] for s in self.sections]])
+        idB=cc([[s.i+n for s in self.sections],
+                [s.j+n for s in self.sections]])
         Vttk=k/2*(Vt[idA] - Vt[idB])
         jtt[idA,idB] =  d_end*(1-Vttk)
         jtt[idA,idA] +=  d_end*(-1-Vttk)
@@ -660,7 +732,7 @@ class Neuron:
         """return the transmembrane current towards inside"""
         I = np.zeros(self.nb_comp)
         for s in self.sections:
-            I[s['idV']] = s['obj'].I( V[s['idV']], S[s['idS']],t)
+            I[s.idV] = s.I( V[s.idV], S,t)
         return I
 
 
@@ -669,7 +741,7 @@ class Neuron:
         """return the differential of the state variables of the ion channels"""
         dS = np.zeros_like(S)
         for s in self.sections:
-            dS[s['idS']] = s['obj'].dS(V[s['idV']] + self.V_ref, S[s['idS']])
+            dS[s.idS] = s.dS(V[s.idV] + self.V_ref, S[s.idS])
         return dS
 
 
@@ -678,7 +750,7 @@ class Neuron:
          towards inside"""
         J = np.zeros(self.nb_comp)
         for s in self.sections:
-            J[s['idV']] = s['obj'].J(ion, V[s['idV']], S[s['idS']],t)
+            J[s.idV] = s.J(ion, V[s.idV], S[s.idS],t)
         return J
 
 
@@ -688,16 +760,16 @@ class Neuron:
         id section
         position
         """
-        return (np.concatenate( [ [s['num']]*len(s['idV']) for s in self.sections]),
-                np.concatenate([s['obj'].x for s in self.sections]))
+        return (np.concatenate( [ [s.num]*len(s.idV) for s in self.sections]),
+                np.concatenate([s.x for s in self.sections]))
 
     def indexV_flat(self):
         """return position (flattened) for potential vector :"""
         x=0
         ind=[]
         for s in self.sections:
-            ind=np.append(ind,s['obj'].x+x)
-            x += s['obj'].L
+            ind=np.append(ind,s.x+x)
+            x += s.L
         return ind
 
     def indexS(self):
@@ -708,11 +780,27 @@ class Neuron:
         position
         """
         #todo
-        return (np.concatenate( [ [s['num']]*len(s['idS']) for s in self.sections]),
-                np.concatenate([s['obj'].index for s in self.sections]))
+        return (np.concatenate( [ [s.num]*len(s.idS) for s in self.sections]),
+                np.concatenate([s.index for s in self.sections]))
 
+class SimuChannel:
+    """Class for vectorization of channels used for efficiency"""
+    def __init__(self,ch_cls):
+        self.I=njit(ch_cls._I)
+        self.dS=njit(ch_cls._dS)
+        self.__name__=(ch_cls.__name__)
 
-
+    def fill_I_dS(self,y,V_S,t):
+        V=V_S[self.idV,:]
+        S=[V_S[self.idS[k],:] for k in range(self.nb_var)]
+        y[self.idV,:] += self.I(V,*S,t,**self.params) * self.k
+        if self.nb_var:
+            dS = self.dS(V,*S,t,**self.params)
+            if self.nb_var >1:
+                for k in range(self.nb_var):
+                    y[self.idS[k],:] = dS[k]
+            else:
+                y[self.idS[0],:] = dS
 
 
 

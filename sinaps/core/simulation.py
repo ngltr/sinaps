@@ -27,17 +27,18 @@ class Simulation:
 
     def __init__(self, neuron, dx=1):
         self.N = neuron
-        self.idV,idS0 = self.N.init_sim(dx)
-        self.idS = idS0 + self.idV[-1] + 1
-        self.Cm1 = 1/self.N.capacitance_array()
-        self.Vol1 = 1/self.N.volume_array()
+        self.idV,self.idS = self.N.init_sim(dx)
+        self.Cm1 = 1/self.N.capacitance_array()[:,np.newaxis]
+        self.Vol1 = 1/self.N.volume_array()[:,np.newaxis]
         G = csr_matrix(self.N.conductance_mat())#sparse matrix format for
                                                      #efficiency
         self.k_c = csr_matrix(np.concatenate([np.identity(self.N.nb_comp),
                                        self.N.connection_mat()]))
         self.G = G @ self.k_c
-        self.V_S0 = np.concatenate([self.N.V0_array(), self.N.S0_array()])
-
+        self.V_S0 = np.zeros(max(np.concatenate((self.N.idV,self.N.idS)))+1)
+        self.N.fill_V0_array(self.V_S0)
+        self.N.fill_S0_array(self.V_S0)
+        self.channels = self.N.all_channels()
         self.ions = 0
         self.C = dict()
         self.sol_diff = dict()
@@ -53,7 +54,7 @@ class Simulation:
         """
         tq=tqdm(total=t_span[1]-t_span[0],unit='ms')
         sol=solve_ivp(lambda t, y:Simulation.ode_function(y,t,self.idV,self.idS,
-                                                self.Cm1,self.G,self.N,
+                                                self.Cm1,self.G,self.channels,
                                                 tq,t_span),
                       t_span,
                       self.V_S0,
@@ -83,7 +84,7 @@ class Simulation:
                                 fill_value='extrapolate')
 
     @staticmethod
-    def ode_function(y,t,idV,idS,Cm1,G,neuron,tq=None,t_span=None):
+    def ode_function(y,t,idV,idS,Cm1,G,channels,tq=None,t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
 
@@ -108,12 +109,19 @@ class Simulation:
         neuron : type Neuron contains the information about the behaviour
          of the ion channels in order to compute I
         """
+        vectorize = y.ndim >1
+        if not vectorize:
+            y=y[:,np.newaxis]
 
-        V = y[idV]
-        S = y[idS]
-        I = neuron.I(V, S, t) #current of active ion channels from outisde to inside
-        dV = Cm1 * (G @ V + I) #dV/dt for  compartiment
-        dS = neuron.dS(V,S)
+        V = y[idV,:]
+        dV_S = np.zeros_like(y)
+        for c in channels:
+            c.fill_I_dS(dV_S,y,t) #current of active ion channels from outisde to inside
+        if vectorize:
+            dV_S[idV,:] += np.hstack([G @ V[:,k] for k in range(y.shape[1])]) #current inter compartment
+        else :
+            dV_S[idV,:]  += G @ V
+        dV_S[idV,:]  *= Cm1  #dV/dt for  compartiment
 
         #Progressbar
         if not (tq is None):
@@ -121,7 +129,7 @@ class Simulation:
             if n>tq.n:
                 tq.update(n-tq.n)
 
-        return np.concatenate([dV,dS])
+        return dV_S.squeeze()
 
 
     def run_diff(self,ion,temperature=310,method='BDF',atol = 1.49012e-8,**kwargs):

@@ -5,6 +5,7 @@ from matplotlib import cm
 from scipy import interpolate
 from bokeh.models import ColumnDataSource
 from bokeh.io import show, output_notebook, output_file
+import warnings
 
 from .bokeh_surface import Surface3d
 
@@ -43,6 +44,13 @@ class SimuView:
         fig = plt.figure(figsize=figsize,**kwargs)
         fig.gca().matshow(Z.T)
 
+    def V(self,section,max_plot=10,figsize=(800,500),**kwargs):
+        step=max(int(self.simu.N[section].nb_comp/max_plot),1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.simu.V[section].loc[::,::step].plot(ylabel='Voltage (mV)',
+                                                    figsize=figsize)
+
 
     def graph3D(self,ion=None):
         X,Y,Z = self._meshgrid(ion,100)
@@ -62,8 +70,8 @@ class NeuronView:
     def graph(self):
         plt.scatter(self.x, self.y, marker='|')
         for s in self.N.sections:
-                plt.plot([self.x[s['i']],self.x[s['j']]],[self.y[s['i']],self.y[s['j']]],
-                        linewidth=s['obj'].a*2,
+                plt.plot([self.x[s.i],self.x[s.j]],[self.y[s.i],self.y[s.j]],
+                        linewidth=s.a*2,
                         color='grey')
 
 

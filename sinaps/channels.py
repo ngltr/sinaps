@@ -31,87 +31,92 @@ To implement a channel C, it is necessary to implement  :
 
 
 class ConstantCurrent(Channel):
-    """Point channel with a constant current
-       current [pA]
+    """channel with a constant current
+       current [pA] (point channel)
+       or [pA/um2] (density channel)
     """
+    param_names=('current',)
+
     def __init__(self,current):
-        super().__init__()
-        self.current = current
+        self.params = {'current' : current}
 
-
-    def I(self,V,S,t):
-        return self.current
+    @staticmethod
+    def _I(V,t,current):
+        return current
 
 
     def __repr__(self):
         return "ConstantCurrent(I={})".format(
-            Quantity (self.current*1E-12,'A'))
+            Quantity (self.params['current']*1E-12,'A{}'.format(self.density_str())))
 
 class CustomCurrent(Channel):
     """Point channel with a custom current
         curent is a function f(t) with t in ms
        current [pA]
     """
-    def __init__(self,current):
-        super().__init__()
-        self.current = current
-
-    def I(self,V,S,t):
-        return self.current(t)
+    def __init__(self,current_func):
+        f=jit(current_func)
+        self._I = jit(lambda V,S,t:f(t))
 
     def __repr__(self):
-        return "CustomCurrent(I={})".format(self.current)
+        return "CustomCurrent"
 
 
 class HeavysideCurrent(Channel):
     """Point channel with a constant current between a time period
 
     """
+    param_names = ('current','t0','tf')
+
     def __init__(self,current,t0,tf):
         """Point channel with a constant current
             current [pA]
             t0 : start of the current [ms]
             tf : end of the current [ms]
         """
-        super().__init__()
-        self.current = current
-        self.t0= t0
-        self.tf = tf
+        self.params={'current': current,
+                    't0' : t0,
+                    'tf' : tf,
+                    }
 
-
-    def I(self,V,S,t):
-        return ((t <= self.tf) & (t >= self.t0)) * self.current
+    @staticmethod
+    def _I(V,t,current,t0,tf):
+        return ((t <= tf) & (t >= t0)) * current
 
 class LeakChannel(Channel):
     """Leak channel
         I = (V-Veq) / Rm
     """
-    def __init__(self,Veq=0,G_m=0.3):
+    param_names=('Veq','R_m')
+
+    def __init__(self,G_m=0.3,Veq=0):
         """
             Veq : [mV] Equilibrium potential for the leak channel
             G_m : [mS/cm2] Resistance of the menbrane (leak channel)
         """
-        super().__init__()
-        self.Veq = Veq
-        self.R_m = 1/G_m * 100 # conversion to GΩ.μm2: 1/(1 mS/cm2) = 100 GΩ.μm2
+        self.params = {'Veq' : Veq,
+                       'R_m' : 1/G_m * 100}
+                       #conversion to GΩ.μm2: 1/(1 mS/cm2) = 100 GΩ.μm2
 
-
-    def I(self,V,S,t):
+    @staticmethod
+    def _I(V,t,Veq,R_m):
         """
         Return the net surfacic current [pA/um2] of the mechanism towards inside
         """
-        return (self.Veq - V) / self.R_m
+        return (Veq - V) / R_m
 
     def __repr__(self):
         return "LeakChannel(Veq={}, G_m={})".format(
-            Quantity (self.Veq*1E-3,'V'),
-            Quantity (1/self.R_m*1E-1,'S/cm²'))
+            Quantity (self.params['Veq']*1E-3,'V'),
+            Quantity (1/self.params['R_m']*1E-1,'S/cm²'))
 
 
 class Hodgkin_Huxley(Channel):
     """Channel Hodgkin Huxley type
 
     """
+    nb_var = 1
+    param_names=('gNa','V_Na','gK','V_K','gL','V_L')
 
     def __init__(self, gNa=120, V_Na=115, gK =36, V_K=-12, gL=0.3 ,V_L=10.6):
         """Channel Hodgkin Huxley type
@@ -122,24 +127,16 @@ class Hodgkin_Huxley(Channel):
             gK :  conductance of leak channel [mS/cm2]
             V_L : Equilibrium potential of leak channel [mV]
         """
-        self.nb_var = 1
-        self.gNa = gNa / 100 # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-        self.V_Na = V_Na
-        self.gK = gK / 100 # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-        self.V_K = V_K
-        self.gL = gL / 100 # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-        self.V_L = V_L
+        self.params={'gNa' : gNa / 100, # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+                    'V_Na' : V_Na,
+                    'gK' : gK / 100, # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+                    'V_K' : V_K,
+                    'gL' : gL / 100, # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+                    'V_L' : V_L,
+                    }
 
-
-    def I(self,V,n,t):
-        """
-        Return the net surfacic current [pA/um2] of the mechanism towards inside
-        """
-        return Hodgkin_Huxley._I(V,n,t,
-                        self.gNa,self.V_Na,self.gK,self.V_K,self.gL,self.V_L)
 
     @staticmethod
-    @jit
     def _I(V,n,t,gNa,V_Na,gK,V_K,gL,V_L):
         alpha_m = (2.5-0.1*V)/(np.exp(2.5-0.1*V)-1)
         beta_m = 4*np.exp(-V/18)
@@ -150,8 +147,8 @@ class Hodgkin_Huxley(Channel):
         I_L = gL * (V - V_L)
         return - I_Na - I_K - I_L
 
-
-    def dS(self, V, n):
+    @staticmethod
+    def _dS(V, n, t,gNa,V_Na,gK,V_K,gL,V_L):
         dn = 0.1 * (1 - 0.1 * V) * (1-n)/(np.exp(1-0.1*V)-1) - 0.125 * np.exp(-V/80)*n
         return dn
 
@@ -164,24 +161,26 @@ class Hodgkin_Huxley(Channel):
 class Hodgkin_Huxley_Ca(Channel):
     """ Ca channel to add to Hodgkin Huxley
     """
+    nb_var = 2
+    param_names=('gCa','V_Ca')
+
     def __init__(self, gCa=14.5E-9, V_Ca=140):
         """Channel Hodgkin Huxley type
             gCa : conductance of calcium channel [mS/cm2]
             V_Ca : Equilibrium potential of calcium channel [mV]
         """
-        self.nb_var = 2
-        self.gCa = gCa / 100 # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-        self.V_Ca = V_Ca
+        self.params={'gCa': gCa / 100, # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+                    'V_Ca' : V_Ca}
 
-
-    def I(self,V,m,h,t):
+    @staticmethod
+    def _I(V,m,h,t,gCa,V_Ca):
         """
         Return the net surfacic current [pA/um2] of the mechanism towards inside
         """
-        I_Ca = self.gCa * m**3 * h * (V - self.V_Ca)
+        I_Ca = gCa * m**3 * h * (V - V_Ca)
         return -I_Ca
 
-    def J(self,ion,V,m,h,t):
+    def J(self,ion,V,m,h,t,gCa,V_Ca):
         """
         Return the flux of ion [aM/ms/um2] of the mechanism towards inside
         """
@@ -190,8 +189,8 @@ class Hodgkin_Huxley_Ca(Channel):
         else:
             return 0 * V
 
-
-    def dS(self, V, m, h):
+    @staticmethod
+    def _dS(V, m, h, t, gCa, V_Ca):
         dm = 1/1.3 * (1/(1 + np.exp(-V+102)) - m)
         dh = 1/10 * (1/(1 + np.exp(-V+24)) - h)
         return dm, dh
