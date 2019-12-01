@@ -204,15 +204,21 @@ class Section:
         init_sim(dx) must have been previously called
         """
         # np.diff(self.xb) = size of compartiment
-        return np.diff(self.xb) * self.param_array(self.c_m) #[nF]
+        return self.surface_array() * self.param_array(self.c_m) #[nF]
 
     def volume_array(self):
-        """Return the volume of each nodes
+        """Return the volume of each compartment
         init_sim(dx) must have been previously called
         """
         # np.diff(self.xb) = size of compartiment
-        return np.diff(self.xb) * self.param_array(self.a) #[um3]
+        return np.diff(self.xb) * self.param_array(self.a)**2 * pi #[um3]
 
+    def surface_array(self):
+        """Return the menbrane surface of each compartment
+        init_sim(dx) must have been previously called
+        """
+        # np.diff(self.xb) = size of compartiment
+        return np.diff(self.xb) * self.param_array(self.a) * 2 * pi #[um2]
 
 
     def r_l_array(self):
@@ -220,7 +226,8 @@ class Section:
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
-        return np.diff(self.x) *  self.param_array_diff(self.r_l)  #[MΩ]
+        return np.diff(self.x) *  self.param_array_diff(self.r_l) \
+                (self.param_array_diff(self.a)**2 *pi)#[MΩ]
 
     def r_l_end(self):
         """Return the longitunal resistance between the start/end of the section
