@@ -78,9 +78,7 @@ class Simulation:
         df.index.name='Time (ms)'
         self.S=df
         self.t_span=t_span
-        self.Vt=interpolate.interp1d(self.sol.t,self.sol.y[self.idV],
-                                fill_value='extrapolate')
-        self.St=interpolate.interp1d(self.sol.t,self.sol.y[self.idS],
+        self.V_St=interpolate.interp1d(self.sol.t,self.sol.y,
                                 fill_value='extrapolate')
 
     @staticmethod
@@ -91,20 +89,14 @@ class Simulation:
         y is a vector containing all state variables of the problem
 
         V=y[idV] : voltage of each node V=0 at resting potential
-                    size n + m where n is the total number of compartiment and
-                    m the total number of connecting nodes
+                    size n + m where n is the total number of compartiment
         S=y[idS] : other states variables related to the ion channels
 
         Cm1 : Inverse of the capacitance of the membrane for each compartiment size n
         G : Conductance matrix size n * n
 
-
         Voltage equation  for compartiment is given by :
         dV/dt = 1/Cm (G.V + Im )
-
-        Voltage equation for connecting nodes linearly dependent of
-        compartment nodes:
-        dV/dt = k_c.dV
 
         neuron : type Neuron contains the information about the behaviour
          of the ion channels in order to compute I
@@ -132,7 +124,7 @@ class Simulation:
         return dV_S.squeeze()
 
 
-    def run_diff(self,ion,temperature=310,method='BDF',atol = 1.49012e-8,**kwargs):
+    def run_diff(self,ions,temperature=310,method='BDF',atol = 1.49012e-8,**kwargs):
         """Run the simulation diffusion for ion ion
         The simulation for the voltage must have been run before
         """
@@ -141,14 +133,17 @@ class Simulation:
         Simulation._flux.cache_clear()
         Simulation._difus_mat.cache_clear()
 
-        sol=solve_ivp(lambda t, y:self.ode_diff_function(y,t,ion,
+        C0 = np.zeros((self.N.nb_comp,len(ions)))
+        self.N.fill_C0_array(C0,ions)
+
+        sol=solve_ivp(lambda t, y:self.ode_diff_function(y,t,ions,
                                                 temperature,
                                                 tq,self.t_span),
                       self.t_span,
-                      self.N.C0_array(ion),
+                      np.reshape(C0,-1,'F'),
                       method=method,
                       atol = atol,
-                      jac = lambda t, y:self.jac_diff(y,t,ion,temperature),
+                      #jac = lambda t, y:self.jac_diff(y,t,ions,temperature),
                        **kwargs)
         tq.close()
 
@@ -158,47 +153,42 @@ class Simulation:
                           [sec, pos])
         df.columns.names = ['Section','Position (μm)']
         df.index.name='Time'
-        self.C[ion] = df
-        self.sol_diff[ion] = sol
+        self.C = df
+        self.sol_diff = sol
 
 
-    def ode_diff_function(self,C,t,ion,T,tq=None,t_span=None):
+    def ode_diff_function(self,y,t,ions,T,tq=None,t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
 
         y is a vector containing all state variables of the problem
 
         C=y : concentration of each node
-                    size n + m where n is the total number of compartiment and
-                    m the total number of connecting nodes
+        [ aM/μm^3 = m mol/L] aM : atto(10E-18) mol
+        size n  where n is the total number of compartiment
 
         V : Voltage array (previously computed)
         S : Status variables of the channels (previously computed)
-
-        k_c : Connection matrix size m * n
-
         T: Temperature (Kelvin)
-
 
         Concentration equation  for compartiment is given by :
         dC/dt = 1/Vol(D V + Jc )
-        with D : Electrodiffusion matrix size n * n+m
+        with D : Electrodiffusion matrix size n * n
         Vol : Volume μm^3
 
-        Concentration equation for connecting nodes linearly dependent of
-        compartment nodes:
-        dC/dt = k_c.dC
-
-        neuron : type Neuron contains the information about the behaviour
+        channels: SimuChannel list contains the information about the behaviour
          of the ion channels in order to compute J
         """
-        #C = y#[ aM/μm^3 = m mol/L] aM : atto(10E-18) mol
+        C = np.reshape(y,(self.N.nb_comp,len(ions)),'F')
+        dC = np.zeros_like(C)
 
-        D = self._difus_mat(T,ion,t)#[μm^3/ms]
-
-        J = self._flux(ion,t)#[aM/ms]
-
-        dC = self.Vol1 * ( (D @ self.k_c) @ C + J) #[aM/μm^3/ms]
+        if len(ions) > 1:
+            dC += np.hstack([self._difus_mat(T,ion,t) @ C[:,k] \
+                        for k,ion in enumerate(ions)])
+        else:
+            dC += self._difus_mat(T,ions[0],t) @ C
+        dC += self._flux(ions,t)#[aM/ms]
+        dC *= self.Vol1 #[aM/μm^3/ms]
 
         ### Progressbar
         if not (tq is None):
@@ -206,9 +196,9 @@ class Simulation:
             if n>tq.n:
                 tq.update(n-tq.n)
 
-        return dC
+        return np.reshape(dC,-1,'F')
 
-    def jac_diff(self,C,t,ion,T):
+    def jac_diff(self,C,t,ions,T):
         D = self._difus_mat(T,ion,t)#[μm^3/ms]
         return (D @ self.k_c).multiply(self.Vol1) #[aM/μm^3/ms]
 
@@ -230,15 +220,18 @@ class Simulation:
         #use the caching with lru as this method will be used a lot)
         """
         #We
-        return self.N.difus_mat(T,ion,self.k_c @ self.Vt(t))
+        return self.N.difus_mat(T,ion,self.k_c @ self.V_St(t)[self.idV])\
+                @ self.k_c
 
     @lru_cache(128)
-    def _flux(self,ion,t):
+    def _flux(self,ions,t):
         """return the transmembrane flux of ion ion (aM/ms attoMol)
                  towards inside
 
         (we call with V,S and t as different argument to be cable to
         #use the caching with lru as this method will be used a lot)
         """
-        #We
-        return self.N.J(ion,self.Vt(t),self.St(t),t)
+        J = np.zeros((self.N.nb_comp,len(ions)))
+        for c in self.channels:
+            c.fill_J(J,ions,self.V_St(t)[:,np.newaxis],t)
+        return J

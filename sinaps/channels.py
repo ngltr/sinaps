@@ -4,7 +4,7 @@ from quantiphy import Quantity
 
 from .core.model import Channel
 
-from .ions import Ca
+from .species import Species
 
 from numba import jit
 
@@ -20,10 +20,10 @@ Capacitance : pF
 Current : pA
 
 To implement a channel C, it is necessary to implement  :
- - a function C.I(V,**st_vars) returning the net  current towards inside
+ - a function C._I(V,t,**st_vars,**params) returning the net  current towards inside
   ([A] for point channel and [pA/μm2] for density channels ) of the mechanism with
  V the voltage (:array) and **st_vars the state variable of the mechanism (:array)
-  - If there is state variables a function C.dS(V,**st_vars) returning a
+ - If there is state variables a function C._dS(V,t,**st_vars,**params) returning a
   tuple with the differential of each state variable
    and a function S0 returning a tuple with the initial value for each state
    variable
@@ -49,17 +49,6 @@ class ConstantCurrent(Channel):
         return "ConstantCurrent(I={})".format(
             Quantity (self.params['current']*1E-12,'A{}'.format(self.density_str())))
 
-class CustomCurrent(Channel):
-    """Point channel with a custom current
-        curent is a function f(t) with t in ms
-       current [pA]
-    """
-    def __init__(self,current_func):
-        f=jit(current_func)
-        self._I = jit(lambda V,S,t:f(t))
-
-    def __repr__(self):
-        return "CustomCurrent"
 
 
 class HeavysideCurrent(Channel):
@@ -80,7 +69,8 @@ class HeavysideCurrent(Channel):
                     }
 
     @staticmethod
-    def _I(V,t,current,t0,tf):
+    def _I(V,t,
+           current,t0,tf):
         return ((t <= tf) & (t >= t0)) * current
 
 class LeakChannel(Channel):
@@ -99,7 +89,8 @@ class LeakChannel(Channel):
                        #conversion to GΩ.μm2: 1/(1 mS/cm2) = 100 GΩ.μm2
 
     @staticmethod
-    def _I(V,t,Veq,R_m):
+    def _I(V,t,
+           Veq,R_m):
         """
         Return the net surfacic current [pA/um2] of the mechanism towards inside
         """
@@ -137,7 +128,8 @@ class Hodgkin_Huxley(Channel):
 
 
     @staticmethod
-    def _I(V,n,t,gNa,V_Na,gK,V_K,gL,V_L):
+    def _I(V,n,t,
+           gNa,V_Na,gK,V_K,gL,V_L):
         alpha_m = (2.5-0.1*V)/(np.exp(2.5-0.1*V)-1)
         beta_m = 4*np.exp(-V/18)
         m = alpha_m/(alpha_m + beta_m);
@@ -148,7 +140,8 @@ class Hodgkin_Huxley(Channel):
         return - I_Na - I_K - I_L
 
     @staticmethod
-    def _dS(V, n, t,gNa,V_Na,gK,V_K,gL,V_L):
+    def _dS(V, n, t,
+            gNa,V_Na,gK,V_K,gL,V_L):
         dn = 0.1 * (1 - 0.1 * V) * (1-n)/(np.exp(1-0.1*V)-1) - 0.125 * np.exp(-V/80)*n
         return dn
 
@@ -173,24 +166,28 @@ class Hodgkin_Huxley_Ca(Channel):
                     'V_Ca' : V_Ca}
 
     @staticmethod
-    def _I(V,m,h,t,gCa,V_Ca):
+    def _I(V,m,h,t,
+           gCa,V_Ca):
         """
         Return the net surfacic current [pA/um2] of the mechanism towards inside
         """
         I_Ca = gCa * m**3 * h * (V - V_Ca)
         return -I_Ca
 
-    def J(self,ion,V,m,h,t,gCa,V_Ca):
+    @staticmethod
+    def _J(ion,V,m,h,t,
+           gCa,V_Ca):
         """
         Return the flux of ion [aM/ms/um2] of the mechanism towards inside
         """
-        if ion is Ca:
-            return self.I(V,m,h,t)/96.48533132838746/2
+        if ion is Species.Ca:
+            return gCa * m**3 * h * (V - V_Ca) /96.48533132838746/2
         else:
             return 0 * V
 
     @staticmethod
-    def _dS(V, m, h, t, gCa, V_Ca):
+    def _dS(V, m, h, t,
+            gCa, V_Ca):
         dm = 1/1.3 * (1/(1 + np.exp(-V+102)) - m)
         dh = 1/10 * (1/(1 + np.exp(-V+24)) - h)
         return dm, dh
@@ -201,3 +198,8 @@ class Hodgkin_Huxley_Ca(Channel):
         h = 1
         """
         return 0, 1
+
+
+def custom(func,name="Custom channel"):
+    C=type(name,(Channel,),{"_I":func})
+    return C()
