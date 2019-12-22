@@ -96,7 +96,7 @@ class Neuron:
         C0 and D dictionnary with inital value
 
         """
-        if not hasattr(species,"__iter___"):
+        if not hasattr(species,"__iter__"):
             if type(C0) in (float,int):
                 C0={species:C0}
             if type(D) in (float,int):

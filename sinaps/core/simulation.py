@@ -124,7 +124,7 @@ class Simulation:
         return dV_S.squeeze()
 
 
-    def run_diff(self,ions,temperature=310,method='BDF',atol = 1.49012e-8,**kwargs):
+    def run_diff(self,species=None,temperature=310,method='BDF',atol = 1.49012e-8,**kwargs):
         """Run the simulation diffusion for ion ion
         The simulation for the voltage must have been run before
         """
@@ -133,10 +133,13 @@ class Simulation:
         Simulation._flux.cache_clear()
         Simulation._difus_mat.cache_clear()
 
-        C0 = np.zeros((self.N.nb_comp,len(ions)))
-        self.N.fill_C0_array(C0,ions)
+        if species is None:
+            species = tuple(self.N.species)
 
-        sol=solve_ivp(lambda t, y:self.ode_diff_function(y,t,ions,
+        C0 = np.zeros((self.N.nb_comp,len(species)))
+        self.N.fill_C0_array(C0,species)
+
+        sol=solve_ivp(lambda t, y:self.ode_diff_function(y,t,species,
                                                 temperature,
                                                 tq,self.t_span),
                       self.t_span,
