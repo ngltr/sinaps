@@ -17,5 +17,6 @@ setuptools.setup(
         "pandas_bokeh",
         "bokeh",
         "tqdm",
+        "numba"
     ],
 )
