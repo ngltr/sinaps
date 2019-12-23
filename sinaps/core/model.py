@@ -5,10 +5,14 @@ import warnings
 
 import numpy as np
 from numba import njit, jitclass
+from numba import int8, float32
 from quantiphy import Quantity
 import pandas as  pd
 from scipy.sparse import dia_matrix
 from scipy import interpolate
+
+import sinaps.species as species
+
 
 PI=np.pi
 """
@@ -341,7 +345,7 @@ class Neuron:
         #kb=1.38064852e-05 GΩ.pA^2.ms
         #e/kb=11.6045 1/(pA.GΩ)=mV^-1
         #k=ez/kbT
-        k=11.6045*ion.value/T
+        k=11.6045*species.CHARGE[ion]/T
 
 
         #flux inside a section
@@ -632,7 +636,7 @@ class Section:
         if ion in self.D:
             D=self.D[ion]#[μm^2/ms]
         else:
-             D=ion.D #TODO
+             D=species.DIFFUSION_COEF[ion]
         return self.param_array_diff(D) * (PI * self.param_array_diff(self.a)**2)\
                 / np.diff(self.x)  #[μm^3/ms]
 
@@ -646,7 +650,7 @@ class Section:
         if ion in self.D:
             D=self.D[ion]#[μm^2/ms]
         else:
-             D=ion.D #TODO
+             D=species.DIFFUSION_COEF[ion]
         return self.param_array_end(D)  \
                 *(PI * self.param_array_end(self.a)**2) \
                 / np.array([self.x[0],(self.L - self.x[-1])])  #[μm^3/ms]
@@ -742,21 +746,13 @@ class SimuChannel:
                                               * self.k).squeeze())
 
 
-
-class Ion:
-    """This class represent an ionic specie"""
-    def __init__(self,name,charge,D):
+@jitclass({'charge':int8,'D':float32})
+class _Species:
+    """This class represent a species"""
+    def __init__(self,charge,D):
         """
-        name : str
         charge : int electric charge of the ion (ex 2 for Ca2+ and -1 for Cl-)
         D : diffusion coef of the ion um2/ms
         """
-        self.name = name
         self.charge = charge
         self.D = D
-
-    def __repr__(self):
-        return "{}{}{}".format(self.name,
-                                abs(self.charge) if self.charge>1 else "",
-                                "+" if self.charge >0 else "-"
-                                )

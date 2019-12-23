@@ -1,8 +1,8 @@
-from sinaps.core.model import Section, Ion, Channel
+from sinaps.core.model import Section, Channel
 from sinaps.core.model import Neuron as _Neuron
 from sinaps.core.simulation import Simulation as _Simulation
 from sinaps.species import Species
-from sinaps.species import INITIAL_CONCENTRATION, DIFFUSION_COEF
+from sinaps.species import INITIAL_CONCENTRATION
 from sinaps.gui.graph import NeuronView, SimuView
 
 import sinaps.gui.bokeh_surface

@@ -1,12 +1,20 @@
 from enum import Enum
+from enum import auto
 
 class Species(Enum):
-    Ca = 2
-    K = 2
-    Na = 2
-    Buffer = -2
-    BufferBinded = 0
+    Ca = auto()
+    K = auto()
+    Na = auto()
+    Buffer = auto()
+    BufferBinded = auto()
 
+
+CHARGE = {      Species.Ca:2,
+                Species.K:1,
+                Species.Na:2,
+                Species.Buffer:-2,
+                Species.BufferBinded:0
+                }
 
 DIFFUSION_COEF = {
                 Species.Ca:0.2,
