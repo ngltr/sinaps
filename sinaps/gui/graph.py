@@ -5,6 +5,8 @@ from matplotlib import cm
 from scipy import interpolate
 from bokeh.models import ColumnDataSource
 from bokeh.io import show, output_notebook, output_file
+import warnings
+import hvplot.pandas
 
 from .bokeh_surface import Surface3d
 
@@ -22,25 +24,44 @@ class SimuView:
     def __init__(self, simu):
         self.simu=simu
 
-    def _meshgrid(self,n):
-        y=self.simu.sol.t
+    def _meshgrid(self,ion,n):
+
         x=self.simu.N.indexV_flat()
+        if ion is None:
+            sol=self.simu.sol
+        else:
+            sol=self.simu.sol_diff[ion]
+        y=sol.t
         V=interpolate.interp2d(x,y,
-            self.simu.sol.y[:self.simu.N.nb_comp,:].reshape(-1))
+            sol.y[:self.simu.N.nb_comp,:].reshape(-1))
         X = np.arange(x[0], x[-1], (x[-1]-x[0])/n )
         Y = np.arange(y[0], y[-1], (y[-1]-y[0])/n )
         X2, Y2 = np.meshgrid(X, Y)
         Z = V(X,Y)
         return X2,Y2,Z
 
-    def graph2D(self,figsize=(10,10),**kwargs):
-        X,Y,Z = self._meshgrid(1000)
+    def graph2D(self,figsize=(10,10),ion=None,**kwargs):
+        X,Y,Z = self._meshgrid(ion,1000)
         fig = plt.figure(figsize=figsize,**kwargs)
         fig.gca().matshow(Z.T)
 
+    def V(self,section=np.s_[:],max_plot=10,height=400,**kwargs):
+        V=self.simu.V[section].copy()
+        if type(section) is int:
+            sections = [self.simu.N[section]]
+            V.columns=V.columns.map(("sec{}".format(section) +" - {}µm").format)
+        else:
+            sections = self.simu.N[section]
+            V.columns=V.columns.map("sec{0[0]} - {0[1]}µm".format)
+        step=max(int(sum([s.nb_comp for s in sections])/max_plot),1)
+        plot = V.loc[::,::step].hvplot(responsive=True,height=400,ylabel='potential (mv)')
+        if type(section) is int:
+            plot.label = "Section {}".format(section)
+        return plot
 
-    def graph3D(self):
-        X,Y,Z = self._meshgrid(100)
+
+    def graph3D(self,ion=None):
+        X,Y,Z = self._meshgrid(ion,100)
         source = ColumnDataSource(data=dict(x=X/1000, y=Y, z=Z))
         surface = Surface3d(x="x", y="y", z="z",
         data_source=source, width=1000, height=1000)
@@ -57,8 +78,8 @@ class NeuronView:
     def graph(self):
         plt.scatter(self.x, self.y, marker='|')
         for s in self.N.sections:
-                plt.plot([self.x[s['i']],self.x[s['j']]],[self.y[s['i']],self.y[s['j']]],
-                        linewidth=s['obj'].a*2,
+                plt.plot([self.x[s.i],self.x[s.j]],[self.y[s.i],self.y[s.j]],
+                        linewidth=s.a*2,
                         color='grey')
 
 

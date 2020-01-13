@@ -14,8 +14,8 @@ setuptools.setup(
         "quantiphy",
         "scipy>=1.0.0",
         "matplotlib",
-        "pandas_bokeh",
-        "bokeh",
+        "hvplot",
         "tqdm",
+        "numba"
     ],
 )
