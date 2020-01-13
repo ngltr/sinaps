@@ -530,7 +530,7 @@ class Neuron:
         Vttk=k/2*(Vt[idA] - Vt[idB])
         jtt[idA,idB] =  d_end*(1+Vttk)
         jtt[idA,idA] +=  d_end*(-1+Vttk)
-    return jtt
+        return jtt
 
     def I(self,V,S,t):
         """return the transmembrane current towards inside"""

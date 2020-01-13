@@ -19,7 +19,14 @@ class Simulation(_Simulation):
         super().__init__(*args,**kwargs)
         self.view=SimuView(self)
 
-
-import pandas as pd
-pd.set_option('plotting.backend', 'pandas_bokeh')
-pd.plotting.output_notebook()
+try:
+    """Sortie des graphiques dans jupyter notebook """
+    get_ipython().magic('matplotlib inline')
+    from bokeh.io import output_notebook
+    output_notebook()
+    import pandas
+    pandas.set_option('display.max_rows', 500)
+    pd.set_option('plotting.backend', 'pandas_bokeh')
+    pd.plotting.output_notebook()
+except:
+    pass

@@ -12,7 +12,7 @@ setuptools.setup(
         "numpy",
         "pandas",
         "quantiphy",
-        "scipy",
+        "scipy>=1.0.0",
         "matplotlib",
         "pandas_bokeh",
         "bokeh",
