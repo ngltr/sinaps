@@ -6,6 +6,7 @@ from scipy import interpolate
 from bokeh.models import ColumnDataSource
 from bokeh.io import show, output_notebook, output_file
 import warnings
+import hvplot.pandas
 
 from .bokeh_surface import Surface3d
 
@@ -44,12 +45,19 @@ class SimuView:
         fig = plt.figure(figsize=figsize,**kwargs)
         fig.gca().matshow(Z.T)
 
-    def V(self,section,max_plot=10,figsize=(800,500),**kwargs):
-        step=max(int(self.simu.N[section].nb_comp/max_plot),1)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            self.simu.V[section].loc[::,::step].plot(ylabel='Voltage (mV)',
-                                                    figsize=figsize)
+    def V(self,section=np.s_[:],max_plot=10,height=400,**kwargs):
+        V=self.simu.V[section].copy()
+        if type(section) is int:
+            sections = [self.simu.N[section]]
+            V.columns=V.columns.map(("sec{}".format(section) +" - {}µm").format)
+        else:
+            sections = self.simu.N[section]
+            V.columns=V.columns.map("sec{0[0]} - {0[1]}µm".format)
+        step=max(int(sum([s.nb_comp for s in sections])/max_plot),1)
+        plot = V.loc[::,::step].hvplot(responsive=True,height=400,ylabel='potential (mv)')
+        if type(section) is int:
+            plot.label = "Section {}".format(section)
+        return plot
 
 
     def graph3D(self,ion=None):

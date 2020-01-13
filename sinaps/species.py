@@ -8,6 +8,12 @@ class Species(Enum):
     Buffer = auto()
     BufferBinded = auto()
 
+    def __repr__(self):
+        return "<Species {}{}{}>".format(self.name,
+                        abs(CHARGE[self]) if CHARGE[self]>1 else "",
+                        "+" if CHARGE[self] >0 else "-"
+                        )
+
 
 CHARGE = {      Species.Ca:2,
                 Species.K:1,

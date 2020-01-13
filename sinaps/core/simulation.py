@@ -25,7 +25,7 @@ class Simulation:
     """
 
 
-    def __init__(self, neuron, dx=1):
+    def __init__(self, neuron, dx=0):
         self.N = neuron
         self.idV,self.idS = self.N.init_sim(dx)
         self.Cm1 = 1/self.N.capacitance_array()[:,np.newaxis]
@@ -42,10 +42,6 @@ class Simulation:
         self.ions = 0
         self.C = dict()
         self.sol_diff = dict()
-
-    def record_ion(self,ion):
-        self.ions.append(ion)
-        self.V_S0 = np.concatenate([self.V_S0, np.zeros(self.N.nb_comp)])
 
     def run(self,t_span,method='BDF',atol = 1.49012e-8,**kwargs):
         """Run the simulation
@@ -150,11 +146,11 @@ class Simulation:
                        **kwargs)
         tq.close()
 
-        sec,pos = self.N.indexV()
+        sp,sec,pos = self.N.indexV(species)
         df = pd.DataFrame(sol.y[:self.N.nb_comp,:].T ,
                           sol.t ,
-                          [sec, pos])
-        df.columns.names = ['Section','Position (μm)']
+                          [sp, sec, pos])
+        df.columns.names = ['Species','Section','Position (μm)']
         df.index.name='Time'
         self.C = df
         self.sol_diff = sol

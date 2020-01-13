@@ -369,13 +369,18 @@ class Neuron:
         jtt[idA,idA] +=  d_end*(-1-Vttk)
         return jtt #[μm^3/ms]
 
-    def indexV(self):
+    def indexV(self,species=None):
         """return index for potential vector
         id section
         position
         """
-        return (np.concatenate( [ [s.num]*len(s.idV) for s in self.sections]),
+        if species is None:
+            return (np.concatenate( [ [s.num]*len(s.idV) for s in self.sections]),
                 np.concatenate([s.x for s in self.sections]))
+        else:
+            return (np.concatenate( [[sp]*self.nb_comp for sp in species]),
+            np.concatenate( [ [s.num]*len(s.idV) for s in self.sections]*len(species)),
+                np.concatenate([s.x for s in self.sections]*len(species)))
 
     def indexV_flat(self):
         """return position (flattened) for potential vector :"""
@@ -465,15 +470,17 @@ class Section:
         return """Section **{}**
         + L: {}
         + a: {}
-        + C_m: {}
-        + R_l: {}
+        + C_m: {} (c_m={})
+        + R_l: {} (r_l={})
         + channels: {}
         + point_channels: {}""".format(
             self.name,
             Quantity (self.L*1E-6,'m'),
             Quantity (self.a*1E-6,'m'),
             Quantity (self.C_m*1E-12,'F/μm²'),
+            Quantity (self.c_m*1E-12,'F'),
             Quantity (self.R_l*1E9,'Ω.μm'),
+            Quantity (self.r_l*1E-12,'Ω'),
             '\n  + '.join([str(c) for c in self.channels_c]),
             '\n  + '.join(['{}:{}'.format(c.position,c)for c in self.channels_p])
             )
