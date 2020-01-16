@@ -2,9 +2,9 @@
 import numpy as np
 from quantiphy import Quantity
 
-from .core.model import Channel
+from sinaps.core.model import Channel
 
-from .species import Species
+from sinaps.species import Species
 
 from numba import jit
 
@@ -20,10 +20,10 @@ Capacitance : pF
 Current : pA
 
 To implement a channel C, it is necessary to implement  :
- - a function C._I(V,t,**st_vars,**params) returning the net  current towards inside
+ - a static method  C._I(V,t,**st_vars,**params) returning the net  current towards inside
   ([A] for point channel and [pA/μm2] for density channels ) of the mechanism with
  V the voltage (:array) and **st_vars the state variable of the mechanism (:array)
- - If there is state variables a function C._dS(V,t,**st_vars,**params) returning a
+ - If there is state variables a static method C._dS(V,t,**st_vars,**params) returning a
   tuple with the differential of each state variable
    and a function S0 returning a tuple with the initial value for each state
    variable
