@@ -7,8 +7,32 @@ from bokeh.models import ColumnDataSource
 from bokeh.io import show, output_notebook, output_file
 import warnings
 import hvplot.pandas
+import pandas as pd
 
 from .bokeh_surface import Surface3d
+
+from sinaps.core.model import Section, Neuron
+import sinaps.core.simulation
+
+
+class Plotter:
+    def __init__(self,obj):
+        self.obj=obj
+
+    def __call__(self):
+        return self.V()
+
+
+    def V(self,max_plot=10):
+        V=self.obj.simu.V[self.obj.name].copy()
+        if issubclass(type(V.columns),pd.MultiIndex):
+            V.columns=V.columns.map("{0[0]} - {0[1]}µm".format)
+        else:
+            V.columns=V.columns.map(("{}".format(self.obj.name) +" - {}µm").format)
+        step=max(int(sum([s.nb_comp for s in self.obj])/max_plot),1)
+        plot = V.loc[::,::step].hvplot(responsive=True,height=400,ylabel='potential (mv)')
+
+        return plot
 
 class View:
     """This class contains all methods to view the results
@@ -19,6 +43,11 @@ class View:
 
     def voltage():
         pd.Series()
+
+
+
+
+
 
 class SimuView:
     def __init__(self, simu):
@@ -46,13 +75,14 @@ class SimuView:
         fig.gca().matshow(Z.T)
 
     def V(self,section=np.s_[:],max_plot=10,height=400,**kwargs):
-        V=self.simu.V[section].copy()
-        if type(section) is int:
-            sections = [self.simu.N[section]]
-            V.columns=V.columns.map(("sec{}".format(section) +" - {}µm").format)
+        sec = self.simu.N[section]
+        V=self.simu.V[sec.name].copy()
+        if issubclass(type(V.columns),pd.MultiIndex):
+            sections = sec
+            V.columns=V.columns.map("{0[0]} - {0[1]}µm".format)
         else:
-            sections = self.simu.N[section]
-            V.columns=V.columns.map("sec{0[0]} - {0[1]}µm".format)
+            sections = [sec]
+            V.columns=V.columns.map(("{}".format(sec.name) +" - {}µm").format)
         step=max(int(sum([s.nb_comp for s in sections])/max_plot),1)
         plot = V.loc[::,::step].hvplot(responsive=True,height=400,ylabel='potential (mv)')
         if type(section) is int:
@@ -77,8 +107,8 @@ class NeuronView:
 
     def graph(self):
         plt.scatter(self.x, self.y, marker='|')
-        for s in self.N.sections:
-                plt.plot([self.x[s.i],self.x[s.j]],[self.y[s.i],self.y[s.j]],
+        for s,(i,j) in self.N.sections.items():
+                plt.plot([self.x[i],self.x[j]],[self.y[i],self.y[j]],
                         linewidth=s.a*2,
                         color='grey')
 

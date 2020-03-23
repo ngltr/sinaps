@@ -1,5 +1,6 @@
 # coding: utf-8
 from functools import lru_cache
+from functools import reduce
 from copy import deepcopy
 
 import numpy as np
@@ -11,23 +12,39 @@ from numba import jit
 
 from tqdm import tqdm
 
-
 class Simulation:
-    """This class represent a simulation
-    usage :
-    S=Simulation(N,dx) with N type:Neuron and dx spatial_resolution [um]
-    S.run(tnrange)  with tnrange [ms]
+    """
+    Object used for running simulations and accessing results
 
-    To record the concentration of one ion, one must run :
-    S.record_ion(ion) with ion of type Ion
+    The class simulation is linked to a specific neuron and is used to run voltage propagation simulation and electrodiffusion simulations with some custom spatial and time resolution.
+    The results of the simulation are stored as attributes
 
+    Parameters
+    ----------
+
+    neuron : sinaps.Neuron
+        Neuron used for the simulation
+
+    dx : float
+        Spatial resolution (um) to used if no specific dx is set for the section
+
+    force_dx : bool
+        If True, `dx` will be used even if a custom dx was set for a section
+
+
+    Examples
+    --------
+
+    Create the simulation with neuron `N` and spatial resolution of `20 um` :
+
+    >>> sim=sn.Simulation(N,dx=20)
 
     """
 
 
-    def __init__(self, neuron, dx=0):
+    def __init__(self, neuron, dx=None, force_dx=False):
         self.N = neuron
-        self.idV,self.idS = self.N._init_sim(dx)
+        self.idV,self.idS = self.N._init_sim(dx,force_dx)
         self.Cm1 = 1/self.N._capacitance_array()[:,np.newaxis]
         self.Vol1 = 1/self.N._volume_array()[:,np.newaxis]
         G = csr_matrix(self.N._conductance_mat())#sparse matrix format for
@@ -43,10 +60,34 @@ class Simulation:
         self.C = dict()
         self.sol_diff = dict()
 
+
+
+
     def run(self,t_span,method='BDF',atol = 1.49012e-8,**kwargs):
-        """Run the simulation
-        t : array
-        A sequence of time points (ms) for which to solve the system
+        """Run the voltage related simulation
+
+        The results of the simulation are stored in attribute `V`
+
+        Parameters
+        ----------
+        t_span : 2-tuple of number
+            Timeframe for the simulation (ms)
+
+        Other Parameters
+        ----------------
+        **kwargs :
+            args to pass to the ode solver. see the `scipy solve_ivp <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
+
+        Examples
+        --------
+        Run the simulation between 0 and 10 ms :
+
+        >>> sim.run((0,10))
+
+        View the results (potential vector for each time and position):
+
+        >>> sim.V
+
         """
         tq=tqdm(total=t_span[1]-t_span[0],unit='ms')
         sol=solve_ivp(lambda t, y:Simulation._ode_function(y,t,self.idV,self.idS,
@@ -104,7 +145,7 @@ class Simulation:
         V = y[idV,:]
         dV_S = np.zeros_like(y)
         for c in channels:
-            c._fill_I_dS(dV_S,y,t) #current of active ion channels from outisde to inside
+            c.fill_I_dS(dV_S,y,t) #current of active ion channels from outisde to inside
         if vectorize:
             dV_S[idV,:] += np.hstack([G @ V[:,k] for k in range(y.shape[1])]) #current inter compartment
         else :
@@ -130,12 +171,23 @@ class Simulation:
         Simulation._difus_mat.cache_clear()
 
         if species is None:
-            species = tuple(self.N.species)
+            species = tuple(self.N.species)#conversion in tuple the ensure the order (N.species i a set)
+
+        reactions=[]
+        for reac in self.N.reactions:
+            #Conversion species to int
+            members = [{species.index(sp):n for sp,n in member.items()}
+                            for member in reac[0:2]]
+            if reac[2]:
+                reactions.append((*members,reac[2]))
+            members.reverse()
+            if reac[3]:
+                reactions.append((*members,reac[3]))
 
         C0 = np.zeros((self.N.nb_comp,len(species)))
         self.N._fill_C0_array(C0,species)
 
-        sol=solve_ivp(lambda t, y:self._ode_diff_function(y,t,species,
+        sol=solve_ivp(lambda t, y:self._ode_diff_function(y,t,species,reactions,
                                                 temperature,
                                                 tq,self.t_span),
                       self.t_span,
@@ -147,7 +199,7 @@ class Simulation:
         tq.close()
 
         sp,sec,pos = self.N.indexV(species)
-        df = pd.DataFrame(sol.y[:self.N.nb_comp,:].T ,
+        df = pd.DataFrame(sol.y.T ,
                           sol.t ,
                           [sp, sec, pos])
         df.columns.names = ['Species','Section','Position (μm)']
@@ -156,7 +208,7 @@ class Simulation:
         self.sol_diff = sol
 
 
-    def _ode_diff_function(self,y,t,ions,T,tq=None,t_span=None):
+    def _ode_diff_function(self,y,t,ions,reactions,T,tq=None,t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
 
@@ -182,12 +234,13 @@ class Simulation:
         dC = np.zeros_like(C)
 
         if len(ions) > 1:
-            dC += np.hstack([self._difus_mat(T,ion,t) @ C[:,k] \
-                        for k,ion in enumerate(ions)])
+            dC += np.vstack([self._difus_mat(T,ion,t) @ C[:,k]
+                        for k,ion in enumerate(ions)]).T
         else:
             dC += self._difus_mat(T,ions[0],t) @ C
         dC += self._flux(ions,t)#[aM/ms]
         dC *= self.Vol1 #[aM/μm^3/ms]
+        _fill_dC_reaction(dC,C,reactions)
 
         ### Progressbar
         if not (tq is None):
@@ -219,7 +272,7 @@ class Simulation:
         #use the caching with lru as this method will be used a lot)
         """
         #We
-        return self.N.difus_mat(T,ion,self.k_c @ self.V_St(t)[self.idV])\
+        return self.N._difus_mat(T,ion,self.k_c @ self.V_St(t)[self.idV])\
                 @ self.k_c
 
     @lru_cache(128)
@@ -234,3 +287,14 @@ class Simulation:
         for c in self.channels:
             c.fill_J(J,ions,self.V_St(t)[:,np.newaxis],t)
         return J
+
+def _fill_dC_reaction(dC,C,reactions):
+    """Return variation of concentration due to reactions"""
+    for reaction in reactions:
+        dC_reac = reduce(np.multiply,
+                [C[:,sp]**n for sp,n in reaction[0].items()]
+                        )*reaction[2]
+        for sp,n in reaction[0].items():
+            dC[:,sp] += -n*dC_reac
+        for sp,n in reaction[1].items():
+            dC[:,sp] += n*dC_reac

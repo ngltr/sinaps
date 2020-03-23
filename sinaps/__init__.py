@@ -1,6 +1,6 @@
 from sinaps.core.model import Section, Channel
-from sinaps.core.model import Neuron as _Neuron
-from sinaps.core.simulation import Simulation as _Simulation
+from sinaps.data.data import Neuron as _Neuron
+from sinaps.data.data import Simulation as _Simulation
 from sinaps.species import Species
 from sinaps.species import INITIAL_CONCENTRATION, DIFFUSION_COEF
 from sinaps.gui.graph import NeuronView, SimuView
@@ -12,7 +12,7 @@ import sinaps.channels as channels
 __all__ = ['Section','Channel','Neuron','Simulation','Species','channels']
 
 class Neuron(_Neuron):
-    __doc__ = _Neuron.__doc__
+    __doc__ = _Neuron.__init__.__doc__
     def __init__(self):
         super().__init__()
         self.view=NeuronView(self)
@@ -25,6 +25,7 @@ class Neuron(_Neuron):
         super().add_species(species,C0,D)
 
 class Simulation(_Simulation):
+    __doc__ = _Simulation.__doc__
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.view=SimuView(self)
