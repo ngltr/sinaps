@@ -119,6 +119,20 @@ class Neuron(param.Parameterized):
                         raise InitialConcentrationError(sp)#TODO
 
     def add_reaction(self,left,right,k1,k2):
+        """add chemical reaction to the Neuron
+
+        The reaction is defined with the chemical equation and the reactions rate.
+        The reaction will be simuated during the electrodiffusion simulation
+        Species are automatically added to the neuron if they are not already present
+
+        Parameters
+        ----------
+        left, right : dict(Species)
+            chemical equation, with species as key and stoichiometric coefficients as value
+        k1, k2 : float
+            reaction rates
+
+        """
         self.reactions.append((left,right,k1,k2))
         self.add_species(list(left.keys())+list(right.keys()))
 
