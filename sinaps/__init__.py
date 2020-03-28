@@ -28,4 +28,4 @@ class Simulation(_Simulation):
     __doc__ = _Simulation.__doc__
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        self.view=SimuView(self)
+        self.plot=SimuView(self)

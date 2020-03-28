@@ -25,27 +25,24 @@ class Plotter:
 
     def V(self,max_plot=10):
         V=self.obj.simu.V[self.obj.name].copy()
-        if issubclass(type(V.columns),pd.MultiIndex):
-            V.columns=V.columns.map("{0[0]} - {0[1]}µm".format)
+        return self._plot_lines(V,'potential (mv)',max_plot)
+
+
+    def C(self,ion,max_plot=10):
+        C=self.obj.simu.C[ion][self.obj.name].copy()
+        return self._plot_lines(C,'concentration (mM)',max_plot)
+
+
+    def _plot_lines(self,df,label,max_plot):
+        if issubclass(type(df.columns),pd.MultiIndex):
+            df.columns=df.columns.map("{0[0]} - {0[1]}µm".format)
         else:
-            V.columns=V.columns.map(("{}".format(self.obj.name) +" - {}µm").format)
+            df.columns=df.columns.map(("{}".format(self.obj.name) +" - {}µm").format)
+        df.index.name='time (ms)'
         step=max(int(sum([s.nb_comp for s in self.obj])/max_plot),1)
-        plot = V.loc[::,::step].hvplot(responsive=True,height=400,ylabel='potential (mv)')
+        plot = df.loc[::,::step].hvplot(responsive=True,height=400,ylabel=label)
 
         return plot
-
-class View:
-    """This class contains all methods to view the results
-    of a simulation """
-
-    def __init__(self, simu):
-        self.simu = simu
-
-    def voltage():
-        pd.Series()
-
-
-
 
 
 
@@ -54,7 +51,6 @@ class SimuView:
         self.simu=simu
 
     def _meshgrid(self,ion,n):
-
         x=self.simu.N.indexV_flat()
         if ion is None:
             sol=self.simu.sol
@@ -74,20 +70,8 @@ class SimuView:
         fig = plt.figure(figsize=figsize,**kwargs)
         fig.gca().matshow(Z.T)
 
-    def V(self,section=np.s_[:],max_plot=10,height=400,**kwargs):
-        sec = self.simu.N[section]
-        V=self.simu.V[sec.name].copy()
-        if issubclass(type(V.columns),pd.MultiIndex):
-            sections = sec
-            V.columns=V.columns.map("{0[0]} - {0[1]}µm".format)
-        else:
-            sections = [sec]
-            V.columns=V.columns.map(("{}".format(sec.name) +" - {}µm").format)
-        step=max(int(sum([s.nb_comp for s in sections])/max_plot),1)
-        plot = V.loc[::,::step].hvplot(responsive=True,height=400,ylabel='potential (mv)')
-        if type(section) is int:
-            plot.label = "Section {}".format(section)
-        return plot
+    def __call__(self):
+        return self.simu[:].plot()
 
 
     def graph3D(self,ion=None):
