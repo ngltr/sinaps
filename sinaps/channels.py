@@ -115,7 +115,7 @@ class Hodgkin_Huxley(Channel):
             V_Na : Equilibrium potential of sodium channel [mV]
             gK :  conductance of potasium channel [mS/cm2]
             V_K : Equilibrium potential of potasium channel [mV]
-            gK :  conductance of leak channel [mS/cm2]
+            gL :  conductance of leak channel [mS/cm2]
             V_L : Equilibrium potential of leak channel [mV]
         """
         self.params={'gNa' : gNa / 100, # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
@@ -157,7 +157,7 @@ class Hodgkin_Huxley_Ca(Channel):
     nb_var = 2
     param_names=('gCa','V_Ca')
 
-    def __init__(self, gCa=14.5E-9, V_Ca=140):
+    def __init__(self, gCa=14.5, V_Ca=115): #
         """Channel Hodgkin Huxley type
             gCa : conductance of calcium channel [mS/cm2]
             V_Ca : Equilibrium potential of calcium channel [mV]
@@ -172,7 +172,7 @@ class Hodgkin_Huxley_Ca(Channel):
         Return the net surfacic current [pA/um2] of the mechanism towards inside
         """
         I_Ca = gCa * m**3 * h * (V - V_Ca)
-        return -I_Ca
+        return - I_Ca
 
     @staticmethod
     def _J(ion,V,m,h,t,
@@ -181,7 +181,7 @@ class Hodgkin_Huxley_Ca(Channel):
         Return the flux of ion [aM/ms/um2] of the mechanism towards inside
         """
         if ion is Species.Ca:
-            return gCa * m**3 * h * (V - V_Ca) /96.48533132838746/2
+            return - gCa * m**3 * h * (V - V_Ca) /96.48533132838746/2
         else:
             return 0 * V
 
