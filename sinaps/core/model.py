@@ -130,7 +130,7 @@ class Neuron(param.Parameterized):
         left, right : dict(Species)
             chemical equation, with species as key and stoichiometric coefficients as value
         k1, k2 : float
-            reaction rates
+            reaction rates, units depends of stoichiometric coeficents, base value are ms and mMol/L
 
         """
         self.reactions.append((left,right,k1,k2))
@@ -501,9 +501,6 @@ class Section(param.Parameterized):
         if None (default) the channels is treated as a continuous density channel
         giving a surfacic current in nA/μm2
         """
-        #TODO copy the objet to avoid sharing same
-        #betwenn several sections
-
         if not issubclass(type(C), Channel):
             raise ValueError('Must be a channel (sinaps.Channel)')
 
@@ -517,6 +514,12 @@ class Section(param.Parameterized):
         else:
             C.position=x
             self.channels_p.append(C)
+
+    def clear_channels(self):
+        """Clear all channels
+        """
+        self.channels_c=[]
+        self.channels_p=[]
 
     @property
     def channels(self):
@@ -669,6 +672,9 @@ class Section(param.Parameterized):
         return self._param_array_end(D)  \
                 *(PI * self._param_array_end(self.a)**2) \
                 / np.array([self.x[0],(self.L - self.x[-1])])  #[μm^3/ms]
+
+    def __lt__(self,other):
+        return self.name < other.name
 
 
 class Channel:

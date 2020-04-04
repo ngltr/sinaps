@@ -46,6 +46,12 @@ class SectionList:
         for s in self:
             s.add_channel(c)
 
+    def clear_channels(self):
+        """Clear all channels
+        """
+        for s in self:
+            s.clear_channels()
+
 
 class Neuron(_Neuron):
     def __len__(self):
@@ -85,7 +91,7 @@ class SectionListSimu:
 
 
 class Simulation(_Simulation):
-    
+
 
     def __len__(self):
         return len(self.N)
