@@ -43,9 +43,9 @@ def array(cls_obj,getter=True,setter=True):
 
 @array(Section)
 class SectionList:
-    def add_channel(self,c):
+    def add_channel(self,channel,x=None):
         for s in self:
-            s.add_channel(c)
+            s.add_channel(channel,x)
 
     def clear_channels(self):
         """Clear all channels
