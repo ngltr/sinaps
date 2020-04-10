@@ -6,10 +6,15 @@ import re
 
 import networkx as nx
 
+
 from sinaps.core.model import Section
 from sinaps.core.model import Neuron as _Neuron
 from sinaps.core.simulation import Simulation as _Simulation
+from sinaps.species import Species
+from sinaps.species import INITIAL_CONCENTRATION, DIFFUSION_COEF
+
 from sinaps.gui.graph import Plotter
+from sinaps.gui.neuron import NeuronView
 
 def array(cls_obj,getter=True,setter=True):
     """
@@ -124,6 +129,12 @@ class SectionListSimu:
     @property
     def V(self):
         return self.simu.V[self.name]
+
+    def C(self,ion):
+        return self.simu.C[ion,self.name]
+
+    def I(self,ch_cls):
+        return self.simu.current(ch_cls)[self.name]
 
 
 class Simulation(_Simulation):

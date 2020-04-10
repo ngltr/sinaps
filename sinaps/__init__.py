@@ -3,26 +3,20 @@ from sinaps.data.data import Neuron as _Neuron
 from sinaps.data.data import Simulation as _Simulation
 from sinaps.species import Species
 from sinaps.species import INITIAL_CONCENTRATION, DIFFUSION_COEF
-from sinaps.gui.graph import NeuronView, SimuView
+from sinaps.gui.graph import SimuView
 
 import sinaps.gui.bokeh_surface
 
 import sinaps.channels as channels
+import sinaps.io as io
 
-__all__ = ['Section','Channel','Neuron','Simulation','Species','channels']
+__all__ = ['Section','Channel','Neuron','Simulation','Species','channels','io']
 
 class Neuron(_Neuron):
     __doc__ = _Neuron.__init__.__doc__
-    def __init__(self):
-        super().__init__()
-        self.view=NeuronView(self)
 
-    def add_species(self,species,C0=None,D=None):
-        if C0 is None:
-            C0 = INITIAL_CONCENTRATION
-        if D is None:
-            D = DIFFUSION_COEF
-        super().add_species(species,C0,D)
+    DEFAULT_CONCENTRATION = INITIAL_CONCENTRATION
+    DEFAULT_DIFFUSION_COEF = DIFFUSION_COEF
 
 class Simulation(_Simulation):
     __doc__ = _Simulation.__doc__

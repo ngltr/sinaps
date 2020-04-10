@@ -195,7 +195,7 @@ class Neuron(param.Parameterized):
 
     def _all_channels(self):
         """Return channels objects suitable for the simulation"""
-        cch=[]
+        cch={}
         for ch_cls in { type(c)  for s in self.sections for c in s.channels}:
             ch = _SimuChannel(ch_cls)
             params={ p:[] for p in ch_cls.param_names}
@@ -223,7 +223,7 @@ class Neuron(param.Parameterized):
             else:
                 ch.idS=[]
             ch.k= np.concatenate(surface)[:,np.newaxis]
-            cch.append(ch)
+            cch[ch_cls] = ch
         return cch
 
     def _capacitance_array(self):
@@ -251,6 +251,16 @@ class Neuron(param.Parameterized):
             V[s.idV] = s._volume_array()
 
         return V
+
+    def radius_array(self):
+        """Return the radius of each nodes
+        init_sim(dx) must have been previously called
+        """
+        a = np.zeros(self.nb_comp)
+        for s in self.sections:
+            a[s.idV] = s._param_array(s.a)
+        return a
+
 
     def _conductance_mat(self):
         """Return conductance matrix G of the neuron
@@ -673,27 +683,20 @@ class Section(param.Parameterized):
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
-        if ion in self.D:
-            D=self.D[ion]#[μm^2/ms]
-        else:
-             D=species.DIFFUSION_COEF[ion]
-        return self._param_array_diff(D) * (PI * self._param_array_diff(self.a)**2)\
-                / np.diff(self.x)  #[μm^3/ms]
+        return (self._param_array_diff(self.D[ion]) #[μm^2/ms]
+                * PI * self._param_array_diff(self.a)**2 #[μm]
+                ) / np.diff(self.x)  #[μm^3/ms]
 
     def _difus_end(self,ion):
-        """Return the diffusion coefficient D*a/dx betweenthe start/end of the section
+        """Return the diffusion coefficient D*a/dx between the start/end of the section
         and the first/last node for ion
         unit μm^3/ms
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
-        if ion in self.D:
-            D=self.D[ion]#[μm^2/ms]
-        else:
-             D=species.DIFFUSION_COEF[ion]
-        return self._param_array_end(D)  \
-                *(PI * self._param_array_end(self.a)**2) \
-                / np.array([self.x[0],(self.L - self.x[-1])])  #[μm^3/ms]
+        return (self._param_array_end(self.D[ion]) #[μm^2/ms]
+                * PI * self._param_array_end(self.a)**2 #[μm]
+                ) / np.array([self.x[0],(self.L - self.x[-1])]) #[μm^3/ms]
 
     def __lt__(self,other):
         return self.name < other.name
@@ -755,7 +758,11 @@ class _SimuChannel:
         self.dS=njit(ch_cls._dS)
         if hasattr(ch_cls,'_J'):
             self.J=njit(ch_cls._J)
-        self.__name__=(ch_cls.__name__)
+        self.type=ch_cls
+
+
+    def __repr__(self):
+        return "<SimuChannel : {} ( {} comp)>".format(self.type.__name__,len(self.idV))
 
     def fill_I_dS(self,y,V_S,t):
         """fill the array y with :
