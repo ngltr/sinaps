@@ -53,6 +53,9 @@ class Neuron(param.Parameterized):
                     init_sim(dx) must be called before
                     """)
 
+    DEFAULT_CONCENTRATION = {}
+    DEFAULT_DIFFUSION_COEF = {}
+
     sections = param.Dict({},doc="Structure of the neuron associating a Section to a tuple identifying the nodes")
     V_ref = param.Number(0,doc="Resting potential of the neuron [mV]")
     reactions = param.List([],doc="Chemical reactions to consider in the reaction-electrodiffusion simulation")
@@ -112,7 +115,7 @@ class Neuron(param.Parameterized):
         for sec,(i,j) in sections.items():
             self.add_section(sec,i,j)
 
-    def add_species(self,species,C0={},D={}):
+    def add_species(self,species,C0=None,D=None):
         """Add species to the neuron
         C0 : default value for initial concentration if not defined in the section
         D : default value for difusion coef if not defined in the section
@@ -122,6 +125,9 @@ class Neuron(param.Parameterized):
         C0 and D dictionnary with inital value
 
         """
+        C0 = C0 if C0 is not  None else self.DEFAULT_CONCENTRATION
+        D = D if D is not  None else self.DEFAULT_DIFFUSION_COEF
+
         if not hasattr(species,"__iter__"):
             if type(C0) in (float,int):
                 C0={species:C0}

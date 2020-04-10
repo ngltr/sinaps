@@ -55,6 +55,15 @@ class SectionList:
 
 
 class Neuron(_Neuron):
+    DEFAULT_CONCENTRATION = INITIAL_CONCENTRATION
+    DEFAULT_DIFFUSION_COEF = DIFFUSION_COEF
+
+
+    def __init__(self):
+        super().__init__()
+        self.plot=NeuronView(self)
+
+
     def __len__(self):
         return len(self.sections)
 
