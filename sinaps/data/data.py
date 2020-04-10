@@ -4,6 +4,7 @@ Provides tools for working with objects
 """
 import re
 
+import networkx as nx
 
 from sinaps.core.model import Section
 from sinaps.core.model import Neuron as _Neuron
@@ -64,18 +65,44 @@ class Neuron(_Neuron):
         return sec
 
 
-    def __getitem__(self,key):
-        if issubclass(type(key), int):
-            return list(self.sections)[key]
-        elif issubclass(type(key), slice):
-            sec = list(self.sections)[key]
-        else:
-            sec=[s for s in self.sections if re.match(key,s.name) is not None]
+    @property
+    def nodes(self,*args,**kwargs):
+        return self.graph.nodes(*args,**kwargs)
 
+    def add_node_data(self,nodes=None,**kwargs):
+        if nodes == None:
+            nodes = self.nodes
+        for nd in self.nodes:
+            self.graph.add_nodes_from(nodes,**kwargs)
+
+
+    def __getitem__(self,key):
+        def get(key):
+            if issubclass(type(key), int):
+                return [e['section'] for e in self.graph[key].values()]
+            elif issubclass(type(key), slice):
+                return list(self.sections)[key]
+            elif issubclass(type(key), str):
+                return [s for s in self.sections if re.match(key,s.name) is not None]
+            else:
+                return sum([get(k) for k in key],[])
+
+        sec = get(key)
         if len(sec) == 1:
             return sec[0]
         else:
-            return SectionList(sec)
+            return SectionList({*sec})
+
+
+    def __iter__(self):
+        return self.sections.__iter__()
+
+    def leaves(self):
+        """Return leaves section"""
+        G=self.graph
+        return [n  for n in G.nodes if G.degree(n) == 1 ]
+
+
 
 
 

@@ -11,6 +11,7 @@ import pandas as  pd
 from scipy.sparse import dia_matrix
 from scipy import interpolate
 import param
+import networkx as nx
 
 import sinaps.species as species
 
@@ -75,6 +76,24 @@ class Neuron(param.Parameterized):
         self._mat=None
         self._x=None
         self._y=None
+        self._graph = nx.Graph()
+
+        self.__traversal_func__ = nx.dfs_edges
+        self.__traversal_source__ = None
+
+
+    @property
+    def graph(self):
+        return self._graph
+
+    @property
+    def sections(self,traversal=None):
+        G=self.graph
+        if self.__traversal_func__ is None:
+            edges = G.edges
+        else:
+            edges = self.__traversal_func__(G, self.__traversal_source__)
+        return {G.edges[e]['section']:e for e in edges}
 
 
     def add_section(self,sec,i,j):
@@ -85,7 +104,13 @@ class Neuron(param.Parameterized):
         """
         if not issubclass(type(sec), Section):
             raise ValueError('Must be a section (sinaps.Section)')
-        self.sections[sec]=(i,j)
+        self.graph.add_edge(i,j,section=sec)
+
+    def add_sections_from_dict(self,sections):
+        """Add multiple sections from dictionnary {sec:(i,j)}
+        """
+        for sec,(i,j) in sections.items():
+            self.add_section(sec,i,j)
 
     def add_species(self,species,C0={},D={}):
         """Add species to the neuron
@@ -144,15 +169,6 @@ class Neuron(param.Parameterized):
     @property
     def nb_nodes(self):
         return max([max(ij) for ij in self.sections.values()])+1
-
-    @property
-    def adj_mat(self):
-        if self._mat is None:
-            n=self.nb_nodes
-            self._mat = np.ndarray([n,n],Section)
-            for s,(i,j) in self.sections.items():
-                self._mat[i,j]=s
-        return self._mat
 
     def _init_sim(self,dx,force=False):
         """Prepare the neuron to run a simulation with spatial resolution dx"""
