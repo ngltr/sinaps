@@ -91,7 +91,7 @@ class Simulation:
         """
         tq=tqdm(total=t_span[1]-t_span[0],unit='ms')
         sol=solve_ivp(lambda t, y:Simulation._ode_function(y,t,self.idV,self.idS,
-                                                self.Cm1,self.G,self.channels,
+                                                self.Cm1,self.G,self.channels.values(),
                                                 tq,t_span),
                       t_span,
                       self.V_S0,
@@ -118,6 +118,38 @@ class Simulation:
         self.V_St=interpolate.interp1d(self.sol.t,self.sol.y,
                                 fill_value='extrapolate')
 
+    def current(self,ch_cls):
+        """Return current of channels of a simulations
+
+        Parameters
+        ----------
+        ch_cls: type
+            Class of channel
+
+        Returns
+        --------
+        a panda.DataFrame with current for all time and compartment
+
+        Examples
+        --------
+        Get the Hodgkin_Huxley current :
+
+        >>> sim.current(sn.channels.Hodgkin_Huxley)
+
+        """
+        ch=self.channels[ch_cls]
+        t=self.sol.t
+        V_S=self.V_St(t)
+        V=V_S[ch.idV,:]
+        S=[V_S[ch.idS[k],:] for k in range(ch.nb_var)]
+        I = np.zeros_like(V_S)
+        ch.fill_I_dS(I,V_S,t)
+        sec,pos = self.N.indexV()
+        df = pd.DataFrame(I[:self.N.nb_comp].T,t,[sec, pos])
+        df.columns.names = ['Section','Position (μm)']
+        df.index.name='Time'
+        return df
+
     @staticmethod
     def _ode_function(y,t,idV,idS,Cm1,G,channels,tq=None,t_span=None):
         """this function express the ode problem :
@@ -135,8 +167,6 @@ class Simulation:
         Voltage equation  for compartiment is given by :
         dV/dt = 1/Cm (G.V + Im )
 
-        neuron : type Neuron contains the information about the behaviour
-         of the ion channels in order to compute I
         """
         vectorize = y.ndim >1
         if not vectorize:
@@ -162,7 +192,7 @@ class Simulation:
 
 
     def run_diff(self,species=None,temperature=310,method='BDF',atol = 1.49012e-8,**kwargs):
-        """Run the simulation diffusion for ion ion
+        """Run the simulation diffusion for ion
         The simulation for the voltage must have been run before
         """
         tq=tqdm(total=self.t_span[1]-self.t_span[0],unit='ms')
@@ -284,7 +314,7 @@ class Simulation:
         #use the caching with lru as this method will be used a lot)
         """
         J = np.zeros((self.N.nb_comp,len(ions)))
-        for c in self.channels:
+        for c in self.channels.values():
             c.fill_J(J,ions,self.V_St(t)[:,np.newaxis],t)
         return J
 
