@@ -10,8 +10,6 @@ import networkx as nx
 from sinaps.core.model import Section
 from sinaps.core.model import Neuron as _Neuron
 from sinaps.core.simulation import Simulation as _Simulation
-from sinaps.species import Species
-from sinaps.species import INITIAL_CONCENTRATION, DIFFUSION_COEF
 
 from sinaps.gui.graph import Plotter
 from sinaps.gui.neuron import NeuronView
@@ -60,9 +58,6 @@ class SectionList:
 
 
 class Neuron(_Neuron):
-    DEFAULT_CONCENTRATION = INITIAL_CONCENTRATION
-    DEFAULT_DIFFUSION_COEF = DIFFUSION_COEF
-
 
     def __init__(self):
         super().__init__()

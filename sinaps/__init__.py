@@ -7,19 +7,21 @@ from sinaps.gui.graph import SimuView
 
 import sinaps.gui.bokeh_surface
 
-import sinaps.channels as channels
-import sinaps.io as io
 
 __all__ = ['Section','Channel','Neuron','Simulation','Species','channels','io']
 
 class Neuron(_Neuron):
     __doc__ = _Neuron.__init__.__doc__
-
     DEFAULT_CONCENTRATION = INITIAL_CONCENTRATION
     DEFAULT_DIFFUSION_COEF = DIFFUSION_COEF
+
+
 
 class Simulation(_Simulation):
     __doc__ = _Simulation.__doc__
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.plot=SimuView(self)
+
+import sinaps.channels as channels
+import sinaps.io as io

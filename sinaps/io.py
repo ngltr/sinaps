@@ -1,6 +1,6 @@
 import re
 
-from sinaps.data.data import Neuron, Section
+from sinaps import Neuron, Section
 
 def read_comp_imaging(filename):
     """Return a Neuron from a Data Comprehensive file"""
