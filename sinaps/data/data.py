@@ -126,7 +126,7 @@ class SectionListSimu:
         return self.simu.V[self.name]
 
     def C(self,ion):
-        return self.simu.C[ion,self.name]
+        return self.simu.C[ion][self.name]
 
     def I(self,ch_cls):
         return self.simu.current(ch_cls)[self.name]
