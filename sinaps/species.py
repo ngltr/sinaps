@@ -9,7 +9,10 @@ class Species(Enum):
     BufferBinded = auto()
 
     def __repr__(self):
-        return "<Species {}{}{}>".format(self.name,
+        return "<Species {}>".format(self.__str__())
+
+    def __str__(self):
+        return "{}{}{}".format(self.name,
                         abs(CHARGE[self]) if CHARGE[self]>1 else "",
                         "+" if CHARGE[self] >0 else "-"
                         )
