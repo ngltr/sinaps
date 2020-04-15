@@ -60,7 +60,7 @@ class Neuron(param.Parameterized):
     V_ref = param.Number(0,doc="Resting potential of the neuron [mV]")
     reactions = param.List([],doc="Chemical reactions to consider in the reaction-electrodiffusion simulation")
 
-    def __init__(self, **kwargs):
+    def __init__(self, sections = None, **kwargs):
         """Set of sections connected together.
 
         Attributes
@@ -80,6 +80,11 @@ class Neuron(param.Parameterized):
         self._x=None
         self._y=None
         self._graph = nx.Graph()
+        if sections is not None:
+            if issubclass(type(sections), dict):
+                self.add_sections_from_dict(sections)
+            else:
+                self.add_sections_from_list(sections)
 
         self.__traversal_func__ = nx.dfs_edges
         self.__traversal_source__ = None
@@ -114,6 +119,13 @@ class Neuron(param.Parameterized):
         """
         for sec,(i,j) in sections.items():
             self.add_section(sec,i,j)
+
+
+    def add_sections_from_list(self,sections):
+        """Add multiple sections from a list {(i,j)}
+        """
+        for i,j in sections:
+            self.add_section(Section(),i,j)
 
     def add_species(self,species,C0=None,D=None):
         """Add species to the neuron
