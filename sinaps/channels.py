@@ -199,6 +199,81 @@ class Hodgkin_Huxley_Ca(Channel):
         """
         return 0, 1
 
+class AMPAR(Channel):
+    """Point channel with a AMPAr-type current starting at time t0,
+
+    """
+    param_names = ('gampa','tampa1','tampa2','V_ampa','t0')
+
+    def __init__(self,t0,gampa=0.02,tampa1=0.3,tampa2=3,V_ampa=70):
+        """Point channel with a AMPAr-type current starting at time t0 [pA]
+            t0: start of the current [ms]
+            gampa: max conductance of Ampar []nS]
+            tampa1: Ampar time constant [ms]
+            tampa2: Ampar time constant [ms]
+            V_ampa: Ampar Nernst potential [mV]
+        """
+        self.params={'t0' : t0,
+                     'gampa' : gampa,
+                     'tampa1' : tampa1,
+                     'tampa2' : tampa2,
+                     'V_ampa': V_ampa,
+                    }
+
+    @staticmethod
+    def _I(V,t,
+           t0,gampa,tampa1,tampa2,V_ampa):
+        return ((t <= t0+20) & (t >= t0)) * np.maximum(0,-gampa*(1-np.exp(-t/tampa1))*np.exp(-t/tampa2)*(V-V_ampa))
+
+    @staticmethod
+    def _J(ion,V,t,
+           t0,gampa,tampa1,tampa2,V_ampa):
+        """
+        Return the flux of ion [aM/ms/um2] of the mechanism towards inside
+        """
+        if ion is Species.Ca:
+            return ((t <= t0+20) & (t >= t0)) * np.maximum(-gampa*(1-np.exp(-t/tampa1))*np.exp(-t/tampa2)*(V-V_ampa) /96.48533132838746/2*0.014,0)
+        else:
+            return 0 * V
+
+
+class NMDAR(Channel):
+    """Point channel with a NMDAr-type current starting at time t0,
+voltage-dependent flow of sodium (Na+) and small amounts of calcium (Ca2+) ions into the cell and potassium (K+) out of the cell.
+    """
+    param_names = ('t0','gnmda','tnmda1','tnmda2','V_nmda')
+
+    def __init__(self,t0,gnmda=0.02,tnmda1=11.5,tnmda2=0.67,V_nmda=75):
+        """Point channel with a AMPAr-type current starting at time t0 [pA]
+            t0: start of the current [ms]
+            gnmda: max conductance of NMDAr [nS]
+            tnmda1: NMDAr time constant [ms]
+            tnmda2: NMDAr time constant [ms]
+            V_nmda: NMDAr Nernst potential [mV]
+        """
+        self.params={'t0' : t0,
+                     'gnmda' : gnmda,
+                     'tnmda1' : tnmda1,
+                     'tnmda2' : tnmda2,
+                     'V_nmda': V_nmda,
+                    }
+
+    @staticmethod
+    def _I(V,t,
+           t0,gnmda,tnmda1,tnmda2,V_nmda):
+        return -((t <= t0+50) & (t >= t0))*gnmda*(np.exp(-(t-t0)/tnmda1)-np.exp(-(t-t0)/tnmda2))/(1+0.33*2*np.exp(-0.06*(V-65)))*(V-V_nmda)
+
+
+    @staticmethod
+    def _J(ion,V,t,
+           t0,gnmda,tnmda1,tnmda2,V_nmda):
+        """
+        Return the flux of ion [aM/ms/um2] of the mechanism towards inside
+        """
+        if ion is Species.Ca:
+            return ((t <= t0+50) & (t >= t0)) *np.maximum(-gnmda*(np.exp(-(t-t0)/tnmda1)-np.exp(-(t-t0)/tnmda2))/(1+0.33*2*np.exp(-0.06*(V-65)))*(V-V_nmda)/96.48533132838746/2*0.15,0)
+        else:
+            return 0 *V
 
 def custom(func,name="Custom channel"):
     C=type(name,(Channel,),{"_I":func})
