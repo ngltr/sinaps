@@ -54,19 +54,21 @@ class SimuView:
     def __init__(self, simu):
         self.simu=simu
 
-    def field(self,df): #TODO make it a static method
+    def field(self,df,time=None): #TODO make it a static method
+        if time is not None:
+            df = df[slice(*time)]
         return rasterize(hv.QuadMesh(
         (df.index.values,self.simu.N.indexV_flat(),df.values.T))
         ).opts(xlabel="Time (ms)",ylabel="Position (μm)",width=600,height=600)
 
-    def V_field(self):
-        return self.field(self.simu.V).opts(title='Potential')
+    def V_field(self,**kwargs):
+        return self.field(self.simu.V,**kwargs).opts(title='Potential')
 
-    def C_field(self,ion):
-        return self.field(self.simu.C[ion]).opts(title='{} Concentration'.format(ion))
+    def C_field(self,ion,**kwargs):
+        return self.field(self.simu.C[ion],**kwargs).opts(title='{} Concentration'.format(ion))
 
-    def I_field(self,ch_cls):
-        return self.field(self.simu.current(ch_cls)).opts(title='{} Current'.format(ch_cls.__name__))
+    def I_field(self,ch_cls,**kwargs):
+        return self.field(self.simu.current(ch_cls),**kwargs).opts(title='{} Current'.format(ch_cls.__name__))
 
     def __call__(self,**kwargs):
         return self.simu[:].plot(**kwargs)
