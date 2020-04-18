@@ -13,10 +13,12 @@ class NeuronView:
 
     def graph(self,layout=None):
         """Plot the graph of the neuron"""
+        G = self.nrn.graph
+        if len(G) <= 2:
+            layout = {n:(n,0) for n in G}
         if layout is None:
             layout = self.layout()
 
-        G = self.nrn.graph
         #Convert section to attributes for hover tool
         G2 = nx.Graph()
         for e in G.edges:
