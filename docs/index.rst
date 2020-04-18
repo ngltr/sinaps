@@ -12,6 +12,8 @@ Welcome to SiNAPS's documentation!
 
    installing
    user_guide
+   Calcium channels
+   Axon Model
    reference
 
 
