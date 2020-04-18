@@ -18,8 +18,8 @@ try:
             super().__init__(*args,**kwargs)
             self.plot=SimuView(self)
 except(ModuleNotFoundError):#nogui
-    from sinaps.core.model import Neuron
-    from sinaps.core.simulation import Simulation
+    from sinaps.data.data import Neuron
+    from sinaps.data.data import Simulation
 
 
 import sinaps.channels as channels

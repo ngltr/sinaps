@@ -11,8 +11,12 @@ from sinaps.core.model import Section
 from sinaps.core.model import Neuron as _Neuron
 from sinaps.core.simulation import Simulation as _Simulation
 
-from sinaps.gui.graph import Plotter
-from sinaps.gui.neuron import NeuronView
+try:
+    from sinaps.gui.graph import Plotter
+    from sinaps.gui.neuron import NeuronView
+    GUI = True
+except(ModuleNotFoundError):
+    GUI = False
 
 def array(cls_obj,getter=True,setter=True):
     """
@@ -61,7 +65,8 @@ class Neuron(_Neuron):
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        self.plot=NeuronView(self)
+        if GUI:
+            self.plot=NeuronView(self)
 
 
     def __len__(self):
@@ -120,7 +125,8 @@ class SectionListSimu:
     def __init__(self,list_,simu):
         super().__init__(list_)
         self.simu = simu
-        self.plot = Plotter(self)
+        if GUI:
+            self.plot = Plotter(self)
     @property
     def V(self):
         return self.simu.V[self.name]
