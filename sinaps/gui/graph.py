@@ -1,7 +1,5 @@
-import matplotlib.pyplot as plt
 import math
 import numpy as np
-from matplotlib import cm
 from scipy import interpolate
 from bokeh.models import ColumnDataSource
 from bokeh.io import show, output_notebook, output_file
