@@ -250,7 +250,7 @@ class Simulation:
         y is a vector containing all state variables of the problem
 
         C=y : concentration of each node
-        [ aM/μm^3 = m mol/L] aM : atto(10E-18) mol
+        [ aM/μm^3 = m mol/L ] aM : atto(10E-18) mol correction: [ a mol/μm^3 = m mol/L = mM]
         size n  where n is the total number of compartiment
 
         V : Voltage array (previously computed)
@@ -324,12 +324,13 @@ class Simulation:
         return J
 
 def _fill_dC_reaction(dC,C,reactions):
-    """Return variation of concentration due to reactions"""
+    """Return variation of concentration due to reactions aM/ms"""
     for reaction in reactions:
         dC_reac = reduce(np.multiply,
                 [C[:,sp]**n for sp,n in reaction[0].items()]
                         )*reaction[2]
         for sp,n in reaction[0].items():
+        # sp :species, n: stoechiometric coefficient
             dC[:,sp] += -n*dC_reac
         for sp,n in reaction[1].items():
             dC[:,sp] += n*dC_reac

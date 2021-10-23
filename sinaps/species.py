@@ -20,15 +20,15 @@ class Species(Enum):
 
 CHARGE = {      Species.Ca:2,
                 Species.K:1,
-                Species.Na:2,
+                Species.Na:1,
                 Species.Buffer:-2,
                 Species.Buffer_Ca:0
                 }
 
 DIFFUSION_COEF = {
                 Species.Ca:0.2,
-                Species.K:0.2,
-                Species.Na:0.2,
+                Species.K:1.15,
+                Species.Na:1.15,
                 Species.Buffer:0.2,
                 Species.Buffer_Ca:0.2
                         }

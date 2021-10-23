@@ -165,7 +165,7 @@ class Neuron(param.Parameterized):
         """add chemical reaction to the Neuron
 
         The reaction is defined with the chemical equation and the reactions rate.
-        The reaction will be simuated during the electrodiffusion simulation
+        The reaction will be simulated during the electrodiffusion simulation
         Species are automatically added to the neuron if they are not already present
 
         Parameters
@@ -239,7 +239,7 @@ class Neuron(param.Parameterized):
         return cch
 
     def _capacitance_array(self):
-        """Return the menbrane capacitance for each nodes
+        """Return the membrane capacitance for each nodes
         init_sim(dx) must have been previously called
         """
         if self.dx is None:
