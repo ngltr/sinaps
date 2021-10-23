@@ -17,7 +17,8 @@ from copy import deepcopy
 import warnings
 
 import numpy as np
-from numba import njit, jitclass
+from numba import njit
+from numba.experimental import jitclass
 from numba import int8, float32
 from quantiphy import Quantity
 from scipy.sparse import dia_matrix
