@@ -205,10 +205,10 @@ class AMPAR(Channel):
     """
     param_names = ('gampa','tampa1','tampa2','V_ampa','t0')
 
-    def __init__(self,t0,gampa=0.02,tampa1=0.3,tampa2=3,V_ampa=70):
+    def __init__(self,t0,gampa=0.2,tampa1=0.3,tampa2=3,V_ampa=70):
         """Point channel with a AMPAr-type current starting at time t0 [pA]
             t0: start of the current [ms]
-            gampa: max conductance of Ampar []nS]
+            gampa: max conductance of Ampar [nS]
             tampa1: Ampar time constant [ms]
             tampa2: Ampar time constant [ms]
             V_ampa: Ampar Nernst potential [mV]
@@ -223,7 +223,7 @@ class AMPAR(Channel):
     @staticmethod
     def _I(V,t,
            t0,gampa,tampa1,tampa2,V_ampa):
-        return ((t <= t0+20) & (t >= t0)) * np.maximum(0,-gampa*(1-np.exp(-t/tampa1))*np.exp(-t/tampa2)*(V-V_ampa))
+        return ((t <= t0+20) & (t >= t0)) * np.maximum(0,-gampa*(1-np.exp(-np.abs(t-t0)/tampa1))*np.exp(-np.abs(t-t0)/tampa2)*(V-V_ampa))
 
     @staticmethod
     def _J(ion,V,t,
@@ -232,7 +232,7 @@ class AMPAR(Channel):
         Return the flux of ion [aM/ms/um2] of the mechanism towards inside
         """
         if ion is Species.Ca:
-            return ((t <= t0+20) & (t >= t0)) * np.maximum(-gampa*(1-np.exp(-t/tampa1))*np.exp(-t/tampa2)*(V-V_ampa) /96.48533132838746/2*0.014,0)
+            return ((t <= t0+20) & (t >= t0)) * np.maximum(-gampa*(1-np.exp(-np.abs(t-t0)/tampa1))*np.exp(-np.abs(t-t0)/tampa2)*(V-V_ampa) /96.48533132838746/2*0.014,0)
         else:
             return 0 * V
 
@@ -243,7 +243,7 @@ voltage-dependent flow of sodium (Na+) and small amounts of calcium (Ca2+) ions 
     """
     param_names = ('t0','gnmda','tnmda1','tnmda2','V_nmda')
 
-    def __init__(self,t0,gnmda=0.02,tnmda1=11.5,tnmda2=0.67,V_nmda=75):
+    def __init__(self,t0,gnmda=0.2,tnmda1=11.5,tnmda2=0.67,V_nmda=75):
         """Point channel with a AMPAr-type current starting at time t0 [pA]
             t0: start of the current [ms]
             gnmda: max conductance of NMDAr [nS]
@@ -261,7 +261,7 @@ voltage-dependent flow of sodium (Na+) and small amounts of calcium (Ca2+) ions 
     @staticmethod
     def _I(V,t,
            t0,gnmda,tnmda1,tnmda2,V_nmda):
-        return -((t <= t0+50) & (t >= t0))*gnmda*(np.exp(-(t-t0)/tnmda1)-np.exp(-(t-t0)/tnmda2))/(1+0.33*2*np.exp(-0.06*(V-65)))*(V-V_nmda)
+        return -((t <= t0+50) & (t >= t0))*gnmda*(np.exp(-np.abs(t-t0)/tnmda1)-np.exp(-np.abs(t-t0)/tnmda2))/(1+0.33*2*np.exp(-0.06*(V-65)))*(V-V_nmda)
 
 
     @staticmethod
@@ -271,7 +271,7 @@ voltage-dependent flow of sodium (Na+) and small amounts of calcium (Ca2+) ions 
         Return the flux of ion [aM/ms/um2] of the mechanism towards inside
         """
         if ion is Species.Ca:
-            return ((t <= t0+50) & (t >= t0)) *np.maximum(-gnmda*(np.exp(-(t-t0)/tnmda1)-np.exp(-(t-t0)/tnmda2))/(1+0.33*2*np.exp(-0.06*(V-65)))*(V-V_nmda)/96.48533132838746/2*0.15,0)
+            return ((t <= t0+50) & (t >= t0)) *np.maximum(-gnmda*(np.exp(-np.abs(t-t0)/tnmda1)-np.exp(-np.abs(t-t0)/tnmda2))/(1+0.33*2*np.exp(-0.06*(V-65)))*(V-V_nmda)/96.48533132838746/2*0.15,0)
         else:
             return 0 *V
 
