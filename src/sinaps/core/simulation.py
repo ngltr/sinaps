@@ -282,7 +282,7 @@ class Simulation:
         return np.reshape(dC,-1,'F')
 
     def _jac_diff(self,C,t,ions,T):
-        D = self._difus_mat(T,ion,t)#[μm^3/ms]
+        D = self._difus_mat(T,ions,t)#[μm^3/ms]
         return (D @ self.k_c).multiply(self.Vol1) #[aM/μm^3/ms]
 
 
