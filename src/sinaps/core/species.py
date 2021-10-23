@@ -7,6 +7,8 @@ class Species(Enum):
     Na = auto()
     Buffer = auto()
     Buffer_Ca = auto()
+    Anion = auto()
+    Cation = auto()
 
     def __repr__(self):
         return "<Species {}>".format(self.__str__())
@@ -30,7 +32,9 @@ DIFFUSION_COEF = {
                 Species.K:1.15,
                 Species.Na:1.15,
                 Species.Buffer:0.2,
-                Species.Buffer_Ca:0.2
+                Species.Buffer_Ca:0.2,
+                Species.Anion:0.2,
+                Species.Cation:0.2,
                         }
 
 INITIAL_CONCENTRATION = { #mMol/L
@@ -38,5 +42,7 @@ INITIAL_CONCENTRATION = { #mMol/L
                 Species.K:0,
                 Species.Na:0,
                 Species.Buffer:0.2,
-                Species.Buffer_Ca:0
+                Species.Buffer_Ca:0,
+                Species.Anion:0.2,
+                Species.Cation:0.2,
                         }

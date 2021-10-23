@@ -1,13 +1,4 @@
 # coding: utf-8
-import numpy as np
-from quantiphy import Quantity
-
-from sinaps.core.model import Channel
-
-from sinaps.species import Species
-
-from numba import jit
-
 """
 Units :
 
@@ -30,15 +21,25 @@ To implement a channel C, it is necessary to implement  :
 """
 
 
+import numpy as np
+from quantiphy import Quantity
+
+from sinaps.core.model import Channel
+from sinaps.core.species import Species
+
+
+
+
+
 class ConstantCurrent(Channel):
     """channel with a constant current
        current [pA] (point channel)
        or [pA/um2] (density channel)
     """
-    param_names=('current',)
+    param_names = ('current',)
 
     def __init__(self,current):
-        self.params = {'current' : current}
+        self.params = {'current': current}
 
     @staticmethod
     def _I(V,t,current):
@@ -132,7 +133,7 @@ class Hodgkin_Huxley(Channel):
            gNa,V_Na,gK,V_K,gL,V_L):
         alpha_m = (2.5-0.1*V)/(np.exp(2.5-0.1*V)-1)
         beta_m = 4*np.exp(-V/18)
-        m = alpha_m/(alpha_m + beta_m);
+        m = alpha_m/(alpha_m + beta_m)
         h = 0.89 - 1.1 * n
         I_Na = gNa * m**3 * h * (V -  V_Na)
         I_K = gK * n**4 * (V - V_K)
@@ -144,6 +145,25 @@ class Hodgkin_Huxley(Channel):
             gNa,V_Na,gK,V_K,gL,V_L):
         dn = 0.1 * (1 - 0.1 * V) * (1-n)/(np.exp(1-0.1*V)-1) - 0.125 * np.exp(-V/80)*n
         return dn
+    
+    @staticmethod
+    def _J(ion,V,n,t,
+           gNa,V_Na,gK,V_K,gL,V_L):
+        """
+        Return the flux of ion [aM/ms/um2] of the mechanism towards inside
+        """
+        alpha_m = (2.5-0.1*V)/(np.exp(2.5-0.1*V)-1)
+        beta_m = 4*np.exp(-V/18)
+        m = alpha_m/(alpha_m + beta_m)
+        h = 0.89 - 1.1 * n
+        I_Na = gNa * m**3 * h * (V - V_Na)
+        I_K = gK * n**4 * (V - V_K)
+        if ion is Species.Na:
+            return - I_Na /96.48533132838746
+        elif ion is Species.K:
+            return - I_K /96.48533132838746
+        else:
+            return 0 * V
 
     def S0(self):
         """Return the initial value for the state variable

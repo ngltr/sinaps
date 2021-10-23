@@ -1,7 +1,6 @@
 # coding: utf-8
 from functools import lru_cache
 from functools import reduce
-from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -9,7 +8,6 @@ from scipy.integrate import solve_ivp
 from scipy.sparse import csr_matrix, dia_matrix
 from scipy import interpolate
 from numba import jit
-
 from tqdm import tqdm
 
 class Simulation:
@@ -145,8 +143,6 @@ class Simulation:
         ch=self.channels[ch_cls]
         t=self.sol.t
         V_S=self.V_St(t)
-        V=V_S[ch.idV,:]
-        S=[V_S[ch.idS[k],:] for k in range(ch.nb_var)]
         I = np.zeros_like(V_S)
         ch.fill_I_dS(I,V_S,t)
         sec,pos = self.N.indexV()
