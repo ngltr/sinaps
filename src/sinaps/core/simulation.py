@@ -1,7 +1,6 @@
 # coding: utf-8
 from functools import lru_cache
 from functools import reduce
-from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -9,7 +8,6 @@ from scipy.integrate import solve_ivp
 from scipy.sparse import csr_matrix, dia_matrix
 from scipy import interpolate
 from numba import jit
-
 from tqdm import tqdm
 
 class Simulation:
@@ -42,7 +40,7 @@ class Simulation:
     """
 
 
-    def __init__(self, neuron, dx=None, force_dx=False):
+    def __init__(self, neuron, dx=None, force_dx=False, progressbar=tqdm):
         self.N = neuron
         self.idV,self.idS = self.N._init_sim(dx,force_dx)
         self.Cm1 = 1/self.N._capacitance_array()[:,np.newaxis]
@@ -59,6 +57,7 @@ class Simulation:
         self.ions = 0
         self.C = dict()
         self.sol_diff = dict()
+        self.progressbar = progressbar
 
 
 
@@ -89,7 +88,10 @@ class Simulation:
         >>> sim.V
 
         """
-        tq=tqdm(total=t_span[1]-t_span[0],unit='ms')
+        if self.progressbar is not None:
+            tq = self.progressbar(total=t_span[1]-t_span[0], unit='ms')
+        else:
+            tq = None
         sol=solve_ivp(lambda t, y:Simulation._ode_function(y,t,self.idV,self.idS,
                                                 self.Cm1,self.G,self.channels.values(),
                                                 tq,t_span),
@@ -98,7 +100,8 @@ class Simulation:
                       method=method,
                       atol = atol,
                        **kwargs)
-        tq.close()
+        if tq is not None:
+            tq.close()
 
         sec,pos = self.N.indexV()
         df = pd.DataFrame(sol.y[:self.N.nb_comp,:].T ,
@@ -140,8 +143,6 @@ class Simulation:
         ch=self.channels[ch_cls]
         t=self.sol.t
         V_S=self.V_St(t)
-        V=V_S[ch.idV,:]
-        S=[V_S[ch.idS[k],:] for k in range(ch.nb_var)]
         I = np.zeros_like(V_S)
         ch.fill_I_dS(I,V_S,t)
         sec,pos = self.N.indexV()

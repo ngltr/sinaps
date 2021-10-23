@@ -1,16 +1,9 @@
-import math
 import numpy as np
 from scipy import interpolate
-from bokeh.models import ColumnDataSource
-from bokeh.io import show, output_notebook, output_file
-import warnings
 import hvplot.pandas
 import pandas as pd
 import holoviews as hv
 from holoviews.operation.datashader import rasterize
-
-from sinaps.core.model import Section, Neuron
-import sinaps.core.simulation
 
 
 class Plotter:
@@ -52,19 +45,22 @@ class SimuView:
     def __init__(self, simu):
         self.simu=simu
 
-    def field(self,df,time=None,res=1): #TODO make it a static method
-    #res : resolution : #um
+    def field(self,df,time=None,res=None): #TODO make it a static method
+    # res : resolution : #um
         if time is not None:
             df = df[slice(*time)]
-        dfi = interpolate.interp1d(self.simu.N.indexV_flat(),df.values,fill_value='extrapolate')
-        y = np.arange(0,max(self.simu.N.indexV_flat())+res,res)
+        dfi = interpolate.interp1d(self.simu.N.indexV_flat(), df.values,
+                                   fill_value='extrapolate')
+        if res is None:
+            res = max(max(self.simu.N.indexV_flat())/1000, 1)
+        y = np.arange(0, max(self.simu.N.indexV_flat())+res, res)
         return rasterize(
-                    hv.QuadMesh((df.index.values,y,dfi(y).T))
-            ).opts( xlabel="Time (ms)",
-                    ylabel="Position (μm)",
-                    width=600,
-                    height=600,
-                    tools=['hover'])
+                    hv.QuadMesh((df.index.values, y, dfi(y).T))
+            ).opts(xlabel="Time (ms)",
+                   ylabel="Position (μm)",
+                   width=600,
+                   height=600,
+                   tools=['hover'])
 
     def V_field(self,**kwargs):
         return self.field(self.simu.V,**kwargs).opts(title='Potential')
