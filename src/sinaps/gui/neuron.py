@@ -49,30 +49,37 @@ class NeuronView:
         # Convert section to attributes for hover tool
         g_2 = nx.Graph()
         for edg in graph.edges:
-            sec = graph.edges[edg]['section']
-            g_2.add_edge(edg[0], edg[1],
-                         name=sec.name,
-                         L=sec.L,
-                         a=sec.a,
-                         C_m=sec.C_m,
-                         R_l=sec.R_l)
+            sec = graph.edges[edg]["section"]
+            g_2.add_edge(
+                edg[0],
+                edg[1],
+                name=sec.name,
+                L=sec.L,
+                a=sec.a,
+                C_m=sec.C_m,
+                R_l=sec.R_l,
+            )
         g_2.add_nodes_from(graph.nodes.data())
         plot = hv.Graph.from_networkx(g_2, layout)
 
-        plot.opts(width=500, height=500,
-                  xaxis=None,
-                  yaxis=None,
-                  padding=0.1,
-                  node_size=2,
-                  edge_line_width=hv.dim('a'),
-                  edge_color='blue',
-                  inspection_policy='edges',
-                  edge_hover_line_color='green')
+        plot.opts(
+            width=500,
+            height=500,
+            xaxis=None,
+            yaxis=None,
+            padding=0.1,
+            node_size=2,
+            edge_line_width=hv.dim("a"),
+            edge_color="blue",
+            inspection_policy="edges",
+            edge_hover_line_color="green",
+        )
         return plot
 
     def __call__(self, *args, **kwargs):
         """See graph doc."""
         return self.graph(*args, **kwargs)
+
     __call__.__doc__ = graph.__doc__
 
     def layout(self, layout=nx.kamada_kawai_layout, force=False):
@@ -96,9 +103,7 @@ class NeuronView:
             A dictionary of positions keyed by node.
 
         """
-        if (self._layout is None
-                or (self._sections != self.nrn.sections)
-                or force):
+        if self._layout is None or (self._sections != self.nrn.sections) or force:
             print("Calculating layout...", end="")
             self._sections = self.nrn.sections.copy()
             graph = self.nrn.graph
@@ -106,9 +111,9 @@ class NeuronView:
             g_2 = nx.Graph()
 
             for edg in graph.edges:
-                sec = graph.edges[edg]['section']
+                sec = graph.edges[edg]["section"]
                 g_2.add_edge(edg[0], edg[1], L=sec.L)
-            self._layout = layout(g_2, weight='L')
+            self._layout = layout(g_2, weight="L")
             print("[OK]")
 
         return self._layout
