@@ -1,3 +1,4 @@
 ###### Requirements for building doc ######
 nbsphinx
 pillow>=7.1.0
+ipykernel
