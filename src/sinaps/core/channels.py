@@ -225,7 +225,7 @@ class AMPAR(Channel):
     """
     param_names = ('gampa','tampa1','tampa2','V_ampa','t0')
 
-    def __init__(self,t0,gampa=0.2,tampa1=0.3,tampa2=3,V_ampa=70):
+    def __init__(self,t0,gampa=0.02,tampa1=0.3,tampa2=3,V_ampa=70):
         """Point channel with a AMPAr-type current starting at time t0 [pA]
             t0: start of the current [ms]
             gampa: max conductance of Ampar [nS]
@@ -243,7 +243,7 @@ class AMPAR(Channel):
     @staticmethod
     def _I(V,t,
            t0,gampa,tampa1,tampa2,V_ampa):
-        return ((t <= t0+20) & (t >= t0)) * np.maximum(0,-gampa*(1-np.exp(-np.abs(t-t0)/tampa1))*np.exp(-np.abs(t-t0)/tampa2)*(V-V_ampa))
+        return ((t <= t0+20) & (t >= t0)) *(-gampa*(1-np.exp(-np.abs(t-t0)/tampa1))*np.exp(-np.abs(t-t0)/tampa2)*(V-V_ampa))
 
     @staticmethod
     def _J(ion,V,t,
