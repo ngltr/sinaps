@@ -1,8 +1,7 @@
 from .core.model import Section, Channel
 
-__version__ = '0.1.1'
-__all__ = ['Section', 'Channel', 'Neuron', 'Simulation', 'Species',
-           'channels', 'io']
+__version__ = "0.1.1"
+__all__ = ["Section", "Channel", "Neuron", "Simulation", "Species", "channels", "io"]
 
 try:
     from .data.data import Neuron as _Neuron
@@ -26,6 +25,7 @@ try:
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.plot = SimuView(self)
+
 
 except ModuleNotFoundError:  # nogui
     from .data.data import Neuron

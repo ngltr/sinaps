@@ -9,8 +9,9 @@ from sinaps.core.simulation import Simulation as _Simulation
 try:
     from sinaps.gui.graph import Plotter
     from sinaps.gui.neuron import NeuronView
+
     GUI = True
-except(ModuleNotFoundError):
+except (ModuleNotFoundError):
     GUI = False
 
 
@@ -22,6 +23,7 @@ def array(cls_obj, getter=True, setter=True):
     at the same time
 
     """
+
     def decorator(cls):
         class ObjectList(cls, list):
             __name__ = cls.__name__
@@ -36,16 +38,24 @@ def array(cls_obj, getter=True, setter=True):
                     return values[0]
                 else:
                     return values
+
         fget, fset = None, None
         for p in cls_obj.param:
             if getter:
-                def fget(self, p=p): return self._get(p)
+
+                def fget(self, p=p):
+                    return self._get(p)
+
             if setter:
-                def fset(self, value, p=p): return self._set(p, value)
-            type.__setattr__(ObjectList, p, property(
-                fget=fget, fset=fset,
-                doc=cls_obj.param[p].doc))
+
+                def fset(self, value, p=p):
+                    return self._set(p, value)
+
+            type.__setattr__(
+                ObjectList, p, property(fget=fget, fset=fset, doc=cls_obj.param[p].doc)
+            )
         return ObjectList
+
     return decorator
 
 
@@ -56,14 +66,12 @@ class SectionList:
             s.add_channel(channel, x)
 
     def clear_channels(self):
-        """Clear all channels
-        """
+        """Clear all channels"""
         for s in self:
             s.clear_channels()
 
 
 class Neuron(_Neuron):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if GUI:
@@ -91,7 +99,7 @@ class Neuron(_Neuron):
     def __getitem__(self, key):
         def get(key):
             if issubclass(type(key), int):
-                return [e['section'] for e in self.graph[key].values()]
+                return [e["section"] for e in self.graph[key].values()]
             elif issubclass(type(key), slice):
                 return list(self.sections)[key]
             elif issubclass(type(key), str):
@@ -112,11 +120,11 @@ class Neuron(_Neuron):
         """Return leaves section"""
         G = self.graph
         return [n for n in G.nodes if G.degree(n) == 1]
-    
+
     def __repr__(self):
         return "Neuron(name='{obj.name}', {nsec} sections)".format(
-            obj=self,
-            nsec=len(self))
+            obj=self, nsec=len(self)
+        )
 
 
 @array(Section, setter=False)
@@ -139,7 +147,6 @@ class SectionListSimu:
 
 
 class Simulation(_Simulation):
-
     def __len__(self):
         return len(self.N)
 
