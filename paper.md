@@ -45,61 +45,11 @@ problem: finding from experimental recordings the active synapses, and different
 calcium sources. 
         
 
-
-
-<!-- The forces on stars, galaxies, and dark matter under external gravitational
-fields lead to the dynamical evolution of structures in the universe. The orbits
-of these bodies are therefore key to understanding the formation, history, and
-future state of galaxies. The field of "galactic dynamics," which aims to model
-the gravitating components of galaxies to study their structure and evolution,
-is now well-established, commonly taught, and frequently used in astronomy.
-Aside from toy problems and demonstrations, the majority of problems require
-efficient numerical tools, many of which require the same base code (e.g., for
-performing numerical orbit integration).-->
-
 # Statement of need
 
-In this paper, we present 'Sinaps', an easy-to-use and freely available python library to simulate voltage propagation, ionic electrodiffusion and chemical reactions in neurons. This library has been designed for neuroscience laboratories using both an experimental and a modeling approach. It includes the code to simulate voltage dynamic and ionic electrodiffusion, Hodgkin-Huxley type membrane channels, and as well as chemical reaction. Templates to code custom reaction-diffusion mechanisms, as well as specific membrane channels are provided. The detailed geometry of a specific cell can be easily incorporated, or loaded from data following \href{http://neuromorpho.org/}{\color{urlblue}{neuromopho.org}} file type, or from the Allen institute Whole Brain project.
+`Sinaps` is an easy-to-use and freely available python library to simulate voltage propagation, ionic electrodiffusion and chemical reactions in neurons. This library has been designed for neuroscience laboratories using both an experimental and a modeling approach. It includes the code to simulate voltage dynamic and ionic electrodiffusion, Hodgkin-Huxley type membrane channels, and as well as chemical reaction. Templates to code custom reaction-diffusion mechanisms, as well as specific membrane channels are provided. The detailed geometry of a specific cell can be easily incorporated, or loaded from data following \href{http://neuromorpho.org/}{\color{urlblue}{neuromopho.org}} file type, or from the Allen institute Whole Brain project.
 
 Numerous softwares has been designed to realize such simulations \cite{Neuron,Genesis,Blue brain project,AllenInstitute}. While most of those softwares are using the simple Cable theory model, and are designed toward neuronal networks simulation, our Python library is designed to realize fast simulation of both voltage and ionic dynamics, taking into account electrodiffusion of ions at a fine spatial scale. We also choose to realize the code in Python, which has the advantage of having a code fully transparent with easy access to all the variables. The class structure renders the code easily editable. We also provide the possibility to load a full morphometric geometry from data following \href{http://neuromorpho.org/}{\color{urlblue}{neuromopho.org}} file type, and from the Whole Brain project in the Allen institute. Hence, our library provides an easy way to simulate voltage and ionic dynamics, at the spacial scale reached by morphometric techniques, and at a temporal scales not yet available for \textit{in vivo} imaging of the full neuronal scale.\\
-
-
-<!--`Gala` is an Astropy-affiliated Python package for galactic dynamics. Python
-enables wrapping low-level languages (e.g., C) for speed without losing
-flexibility or ease-of-use in the user-interface. The API for `Gala` was
-designed to provide a class-based and user-friendly interface to fast (C or
-Cython-optimized) implementations of common operations such as gravitational
-potential and force evaluation, orbit integration, dynamical transformations,
-and chaos indicators for nonlinear dynamics. `Gala` also relies heavily on and
-interfaces well with the implementations of physical units and astronomical
-coordinate systems in the `Astropy` package [@astropy] (`astropy.units` and
-`astropy.coordinates`).
-
-`Gala` was designed to be used by both astronomical researchers and by
-students in courses on gravitational dynamics or astronomy. It has already been
-used in a number of scientific publications [@Pearson:2017] and has also been
-used in graduate courses on Galactic dynamics to, e.g., provide interactive
-visualizations of textbook material [@Binney:2008]. The combination of speed,
-design, and support for Astropy functionality in `Gala` will enable exciting
-scientific explorations of forthcoming data releases from the *Gaia* mission
-[@gaia] by students and experts alike.-->
-
-<!-- # Mathematics
-
-Single dollars ($) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
-
-Double dollars make self-standing equations:
-
-$$\Theta(x) = \left\{\begin{array}{l}
-0\textrm{ if } x < 0\cr
-1\textrm{ else}
-\end{array}\right.$$
-
-You can also use plain \LaTeX for equations
-\begin{equation}\label{eq:fourier}
-\hat f(\omega) = \int_{-\infty}^{\infty} f(x) e^{i\omega x} dx
-\end{equation}
-and refer to \autoref{eq:fourier} from text.
 
 # Citations
 
@@ -117,15 +67,8 @@ For a quick reference, the following citation commands can be used:
 
 # Figures
 
-Figures can be included like this:
-![Caption for example figure.\label{fig:example}](figure.png)
-and referenced from text using \autoref{fig:example}.
-
-Figure sizes can be customized by adding an optional second parameter:
-![Caption for example figure.](figure.png){ width=20% }-->
-
 # Acknowledgements
 
-We acknowledge contributions from .
+We acknowledge contributions from.
 
 # References
