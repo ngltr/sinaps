@@ -19,7 +19,7 @@ Please ask questions and submit bugs or feature requests on the
 Credits
 -------
 
-`Sinaps` is currently developped in the LJAD.
+`Sinaps` is currently developped in the LJAD, Université Côte d'Azur, Nice, France.
 
 
 Site map
