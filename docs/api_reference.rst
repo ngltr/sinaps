@@ -1,5 +1,5 @@
 ************
-Reference
+API Reference
 ************
 
 This section provides the complete public API reference for SiNAPS, auto-generated from the docstrings in the project source code.
@@ -7,19 +7,19 @@ This section provides the complete public API reference for SiNAPS, auto-generat
 Section
 ======================
 .. autoclass:: sinaps.Section
-   :members:
+   :members: 
 
 Neuron
 ======================
-.. autoclass:: sinaps.Neuron
-  :members:
+.. autoclass:: sinaps.Neuron(sections,V_ref)
+  :members: add_section, add_section_from_dict, add_section_from_list, add_species, leaves
 
 Simulation
 ======================
 .. autoclass:: sinaps.Simulation
    :members:
 
-Channels
+Channels 
 ======================
 .. autoclass:: sinaps.Channel
    :members:

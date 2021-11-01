@@ -157,8 +157,7 @@ class Neuron(param.Parameterized):
 
         Parameters
         ----------
-        species : TYPE
-            DESCRIPTION.
+        species : Species
         C0 : number or dict [mMol/L], optional
             Default value for initial concentration if not defined in the
             section. The default is None.
@@ -169,17 +168,19 @@ class Neuron(param.Parameterized):
         Raises
         ------
         InitialConcentrationError
-            DESCRIPTION.
 
         Examples
         -------
         Add species `Ca` :
+
         >>> nrn.add_species(Species.Ca)
 
         Add species `Ca` with initial concentration 1 mMol/L:
+
         >>> nrn = Neuron([(0,1)])
         >>> nrn.add_species(Species.Ca, C0=1)
         >>> nrn.sections
+
         """
         C0 = C0 if C0 is not None else self.DEFAULT_CONCENTRATION
         D = D if D is not None else self.DEFAULT_DIFFUSION_COEF
@@ -836,13 +837,13 @@ class Channel:
     """
     Generic class describing a channel or a group of channel
     To implement a channel C, it is necessary to implement  :
-     - a function C.I(V,*st_vars) returning the net  current towards inside
+    - a function C.I(V,*st_vars) returning the net  current towards inside
       ([A] for point channel and [pA/μm2] for density channels ) of the mechanism with
-     V the voltage (:array) and *st_vars the state variable of the mechanism (:array)
-      - If there is state variables a function C.dS(V,*st_vars) returning a
+      V the voltage (:array) and *st_vars the state variable of the mechanism (:array)
+    - If there is state variables a function C.dS(V,*st_vars) returning a
       tuple with the differential of each state variable
-       and a function S0 returning a tuple with the initial value for each state
-       variable
+      and a function S0 returning a tuple with the initial value for each state
+      variable
     """
 
     nb_var = 0

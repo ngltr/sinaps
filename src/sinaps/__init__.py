@@ -13,7 +13,7 @@ try:
     class Neuron(_Neuron):
         """Neuron."""
 
-        __doc__ = _Neuron.__init__.__doc__
+        __doc__ = _Neuron.__doc__
         DEFAULT_CONCENTRATION = INITIAL_CONCENTRATION
         DEFAULT_DIFFUSION_COEF = DIFFUSION_COEF
 

@@ -72,6 +72,8 @@ class SectionList:
 
 
 class Neuron(_Neuron):
+    __doc__ = _Neuron.__doc__
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if GUI:
@@ -88,10 +90,13 @@ class Neuron(_Neuron):
 
     @property
     def nodes(self, *args, **kwargs):
+        """
+        underlying graph nodes
+        """
         return self.graph.nodes(*args, **kwargs)
 
     def add_node_data(self, nodes=None, **kwargs):
-        if nodes == None:
+        if nodes is None:
             nodes = self.nodes
         for nd in self.nodes:
             self.graph.add_nodes_from(nodes, **kwargs)
@@ -147,6 +152,8 @@ class SectionListSimu:
 
 
 class Simulation(_Simulation):
+    __doc__ = _Simulation.__doc__
+
     def __len__(self):
         return len(self.N)
 

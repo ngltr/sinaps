@@ -25,6 +25,11 @@ author = "Claire Guerrier & Nicolas Galtier"
 # The full version, including alpha/beta/rc tags
 release = "0.2"
 
+import param
+
+param.parameterized.docstring_signature = False
+param.parameterized.docstring_describe_params = False
+
 
 # -- General configuration ---------------------------------------------------
 
@@ -41,7 +46,10 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints"]
 
-autodoc_default_options = {"inherited-members": True}
+autodoc_default_options = {
+    "inherited-members": False,
+    "autodoc_inherit_docstrings": True,
+}
 
 # -- Options for HTML output -------------------------------------------------
 
