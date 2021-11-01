@@ -8,9 +8,7 @@ See the documentation at https://sinaps.readthedocs.io
 
 ## Installation
 
-Install the package :
-
-.. code:: bash
+Install the package:
 
     pip install sinaps
 
