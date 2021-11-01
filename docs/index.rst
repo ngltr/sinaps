@@ -29,7 +29,6 @@ Site map
     :caption: GETTING STARTED
     :maxdepth: 2
 
-    what_is_sinaps
     installing
     conventions
     introduction
