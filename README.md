@@ -16,7 +16,5 @@ Install the package:
 ## Support
 
 Please ask questions and submit bugs or feature requests on the
-`git-hub issue tracker`_.
-
-.. _`git-hub issue tracker`: https://github.com/ngltr/sinaps/issues
+`git-hub issue tracker`: https://github.com/ngltr/sinaps/issues
 
