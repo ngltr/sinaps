@@ -38,7 +38,7 @@ that interact non-linearly with each other. There is thus an enhanced need for m
 resolve what can be seen as an inverse problem: finding from experimental recordings the markers
 of synaptic activity, and distinguish in the calcium signals the different calcium sources. 
 
-![Left: a neuron complete geometry. Right: Voltage propagation in a dendritic tree.\label{fig:volt}](Fig.png){width=50%}
+![Left: a neuron complete geometry. Right: Voltage propagation in a dendritic tree.\label{fig:volt}](Fig.png)
 
 # Statement of need
 
