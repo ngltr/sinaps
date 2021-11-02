@@ -1,6 +1,6 @@
 from .core.model import Section, Channel
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __all__ = ["Section", "Channel", "Neuron", "Simulation", "Species", "channels", "io"]
 
 try:
