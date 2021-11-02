@@ -1,6 +1,6 @@
-************
+*************
 API Reference
-************
+*************
 
 This section provides the complete public API reference for SiNAPS, auto-generated from the docstrings in the project source code.
 
@@ -12,16 +12,16 @@ Section
 Neuron
 ======================
 .. autoclass:: sinaps.Neuron(sections,V_ref)
-  :members: add_section, add_section_from_dict, add_section_from_list, add_species, leaves, add_reaction
+  :members: add_section, add_sections_from_dict, add_sections_from_list, add_species, add_reaction, leaves, species, nb_nodes, radius_array, nodes, add_node_data
 
 Simulation
 ======================
 .. autoclass:: sinaps.Simulation
-   :members:
+   :members: run, run_diff
 
 Channels 
 ======================
 .. autoclass:: sinaps.Channel
-   :members:
+   :members: 
 .. automodule:: sinaps.channels
-  :members:
+   :members: ConstantCurrent, HeavysideCurrent, LeakChannel, Hodgkin_Huxley, Hodgkin_Huxley_Ca, AMPAR, NMDAR

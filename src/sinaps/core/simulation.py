@@ -204,8 +204,24 @@ class Simulation:
     def run_diff(
         self, species=None, temperature=310, method="BDF", atol=1.49012e-8, **kwargs
     ):
-        """Run the simulation diffusion for ion
-        The simulation for the voltage must have been run before
+        """Run the electro-diffusion simulation based on Nersnt-Planck model.
+
+        The simulation for the voltage must have been run before.
+
+        The results of the simulation are stored in attribute `C`
+
+        Parameters
+        ----------
+        species : [species]
+            Species to consider in simulation
+        temperature : float
+            Temperature in Nerst Planck equation
+
+        Other Parameters
+        ----------------
+        **kwargs :
+            args to pass to the ode solver. see the `scipy solve_ivp <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
+
         """
         tq = tqdm(total=self.t_span[1] - self.t_span[0], unit="ms")
 
@@ -301,6 +317,7 @@ class Simulation:
         return (D @ self.k_c).multiply(self.Vol1)  # [aM/μm^3/ms]
 
     def resample(self, freq):
+
         self.V = self.V.resample(freq).mean()
 
     # Caching functions

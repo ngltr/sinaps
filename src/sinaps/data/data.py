@@ -90,12 +90,14 @@ class Neuron(_Neuron):
 
     @property
     def nodes(self, *args, **kwargs):
-        """
-        underlying graph nodes
-        """
+        """underlying graph nodes"""
         return self.graph.nodes(*args, **kwargs)
 
     def add_node_data(self, nodes=None, **kwargs):
+        """Add data to graph nodes
+
+        This is useful for plotting
+        """
         if nodes is None:
             nodes = self.nodes
         for nd in self.nodes:

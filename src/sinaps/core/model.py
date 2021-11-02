@@ -235,6 +235,7 @@ class Neuron(param.Parameterized):
 
     @property
     def nb_nodes(self):
+        """Number of nodes of the neuron"""
         return max([max(ij) for ij in self.sections.values()]) + 1
 
     def _init_sim(self, dx, force=False):
@@ -533,7 +534,7 @@ class Neuron(param.Parameterized):
             )
 
     def indexV_flat(self):
-        """return position (flattened) for potential vector :"""
+        """return position (flattened) for potential vector"""
         x = 0
         ind = []
         for s in self.sections:
@@ -834,16 +835,18 @@ class Section(param.Parameterized):
 
 
 class Channel:
-    """
-    Generic class describing a channel or a group of channel
-    To implement a channel C, it is necessary to implement  :
-    - a function C.I(V,*st_vars) returning the net  current towards inside
-      ([A] for point channel and [pA/μm2] for density channels ) of the mechanism with
-      V the voltage (:array) and *st_vars the state variable of the mechanism (:array)
-    - If there is state variables a function C.dS(V,*st_vars) returning a
+    """Generic class describing a channel or a group of channel.
+
+    To implement a channel `C`, it is necessary to implement:
+
+    + a function `C.I(V,*st_vars)` returning the net  current towards inside
+      ([pA] for point channel and [pA/μm2] for density channels ) of the mechanism with
+      `V` the voltage (:array) and `*st_vars` the state variable of the mechanism (:array)
+    + If there is state variables a function `C.dS(V,*st_vars)` returning a
       tuple with the differential of each state variable
-      and a function S0 returning a tuple with the initial value for each state
+      and a function `S0` returning a tuple with the initial value for each state
       variable
+
     """
 
     nb_var = 0
