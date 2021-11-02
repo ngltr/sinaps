@@ -4,7 +4,7 @@
 
 ## Documentation
 
-See the documentation at https://sinaps.readthedocs.io
+See the [documentation](https://math.unice.fr/~guerrier/sinaps_doc)
 
 ## Installation
 
