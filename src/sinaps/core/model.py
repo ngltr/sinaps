@@ -636,9 +636,9 @@ class Section(param.Parameterized):
             Quantity(self.L * 1e-6, "m"),
             Quantity(self.a * 1e-6, "m"),
             Quantity(self.C_m * 1e-6, "F/cm²"),
-            Quantity(self.c_m * 1e-12, "F"),
+            Quantity(self.c_m * 1e-12, "F/μm"),
             Quantity(self.R_l, "Ω.cm"),
-            Quantity(self.r_l * 1e-12, "Ω"),
+            Quantity(self.r_l * 1e-12, "Ω/μm"),
             "\n  + ".join([str(c) for c in self.channels_c]),
             "\n  + ".join(["{}:{}".format(c.position, c) for c in self.channels_p]),
         )
