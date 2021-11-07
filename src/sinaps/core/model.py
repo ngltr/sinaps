@@ -46,6 +46,17 @@ class InitialConcentrationError(ValueError):
         )
 
 
+class DiffusionCoefficientError(ValueError):
+    def __init__(self, ion):
+        super().__init__(
+            """No diffusion coeficient defined for the ion {}
+               define it using [section].D=dict([ion]=[initial_concentration])
+                    """.format(
+                ion
+            )
+        )
+
+
 class SectionAttribute(param.Range):
     """Parameter than can be a tuple or a value"""
 
@@ -204,7 +215,7 @@ class Neuron(param.Parameterized):
                     if sp in D:
                         sec.D[sp] = D[sp]
                     else:
-                        raise InitialConcentrationError(sp)  # TODO
+                        raise DiffusionCoefficientError(sp)
 
     def add_reaction(self, left, right, k1, k2):
         """Add chemical reaction to the Neuron.
