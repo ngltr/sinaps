@@ -73,7 +73,8 @@ class Simulation:
         Other Parameters
         ----------------
         **kwargs :
-            args to pass to the ode solver. see the `scipy solve_ivp <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
+            args to pass to the ode solver. see the `scipy solve_ivp
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
 
         Examples
         --------
@@ -220,7 +221,8 @@ class Simulation:
         Other Parameters
         ----------------
         **kwargs :
-            args to pass to the ode solver. see the `scipy solve_ivp <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
+            args to pass to the ode solver. see the `scipy solve_ivp
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
 
         """
         tq = tqdm(total=self.t_span[1] - self.t_span[0], unit="ms")
