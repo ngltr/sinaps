@@ -1,7 +1,16 @@
-from .core.model import Section, Channel
+from .core.model import Section, Channel, VoltageSource
 
-__version__ = "0.2.0"
-__all__ = ["Section", "Channel", "Neuron", "Simulation", "Species", "channels", "io"]
+__version__ = "0.2.1"
+__all__ = [
+    "Section",
+    "Channel",
+    "Neuron",
+    "VoltageSource",
+    "Simulation",
+    "Species",
+    "channels",
+    "io",
+]
 
 try:
     from .data.data import Neuron as _Neuron

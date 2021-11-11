@@ -50,6 +50,12 @@ def test_section_add_voltage_source(section):
     assert len(s.Vsource) == 1
     s.add_voltage_source(c, 0.23)
     assert s.Vsource[1].position == 0.23
+    nrn = Neuron({s: (0, 1)})
+    nrn._init_sim(10)
+    v_source, source_mat = nrn._all_Vsource()
+    pos = [c.idV for c in v_source]
+    assert pos[0] == 0
+    assert pos[1] == 2
 
 
 def test_section_c_m():

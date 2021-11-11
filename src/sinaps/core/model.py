@@ -21,7 +21,7 @@ from numba import njit
 from numba.experimental import jitclass
 from numba import int8, float32
 from quantiphy import Quantity
-from scipy.sparse import dia_matrix
+from scipy.sparse import dia_matrix, csr_matrix
 from scipy import interpolate
 import param
 import networkx as nx
@@ -298,6 +298,16 @@ class Neuron(param.Parameterized):
             ch.k = np.concatenate(surface)[:, np.newaxis]
             cch[ch_cls] = ch
         return cch
+
+    def _all_Vsource(self):
+        """Return voltage source objects suitable for the simulation."""
+        v_source = [c for s in self.sections for c in s.Vsource]
+        row = np.array([v.idV for v in v_source], int)
+        col = np.ones((1, len(v_source)), int)
+        data = np.ones_like(row)
+        col = np.zeros_like(row)
+        source_mat = csr_matrix((data, (row, col)), (self.nb_comp, 1))
+        return v_source, source_mat
 
     def _capacitance_array(self):
         """Return the menbrane capacitance for each nodes.
@@ -734,6 +744,8 @@ class Section(param.Parameterized):
         self.xb = np.linspace(0, self.L, n + 1)
         self.idV = idV0 + np.array(range(n), int)
         idS0 = idS00
+        for c in self.Vsource:
+            c.idV = idV0 + int(min(c.position * n, n - 1))
         for c in self.channels_c:
             c.idS = [k * n + idS0 + np.array(range(n), int) for k in range(c.nb_var)]
             c.idV = self.idV

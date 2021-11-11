@@ -5,8 +5,9 @@ from functools import reduce
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
-from scipy.sparse import csr_matrix, dia_matrix
+from scipy.sparse import csr_matrix, bmat
 from scipy import interpolate
+from scipy.misc import derivative
 from numba import jit
 from tqdm import tqdm
 
@@ -51,6 +52,9 @@ class Simulation:
             np.concatenate([np.identity(self.N.nb_comp), self.N._connection_mat()])
         )
         self.G = G @ self.k_c
+        self.v_source, source_mat = self.N._all_Vsource()
+        # if len(self.v_source):
+        #    self.G = bmat([[self.G, source_mat], [source_mat.T, None]]).tocsr()
         self.V_S0 = np.zeros(max(np.concatenate((self.N.idV, self.N.idS))) + 1)
         self.N._fill_V0_array(self.V_S0)
         self.N._fill_S0_array(self.V_S0)
@@ -91,6 +95,10 @@ class Simulation:
             tq = self.progressbar(total=t_span[1] - t_span[0], unit="ms")
         else:
             tq = None
+
+        for v in self.v_source:
+            self.V_S0[v.idV] = v.V(t_span[0])
+
         sol = solve_ivp(
             lambda t, y: Simulation._ode_function(
                 y,
@@ -99,6 +107,7 @@ class Simulation:
                 self.idS,
                 self.Cm1,
                 self.G,
+                self.v_source,
                 self.channels.values(),
                 tq,
                 t_span,
@@ -159,7 +168,7 @@ class Simulation:
         return df
 
     @staticmethod
-    def _ode_function(y, t, idV, idS, Cm1, G, channels, tq=None, t_span=None):
+    def _ode_function(y, t, idV, idS, Cm1, G, v_source, channels, tq=None, t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
 
@@ -181,6 +190,8 @@ class Simulation:
             y = y[:, np.newaxis]
 
         V = y[idV, :]
+        for v in v_source:
+            V[v.idV, :] = v.V(t)
         dV_S = np.zeros_like(y)
         for c in channels:
             c.fill_I_dS(
@@ -193,7 +204,8 @@ class Simulation:
         else:
             dV_S[idV, :] += G @ V
         dV_S[idV, :] *= Cm1  # dV/dt for  compartiment
-
+        for v in v_source:
+            dV_S[v.idV, :] = derivative(v.V, t, 1e-3)
         # Progressbar
         if not (tq is None):
             n = round(t - t_span[0], 3)
