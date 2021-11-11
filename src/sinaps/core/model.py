@@ -610,6 +610,7 @@ class Section(param.Parameterized):
         Section._next_id += 1
         self.channels_c = []
         self.channels_p = []
+        self.Vsource = []
 
     @property
     def _C_m(self):
@@ -655,11 +656,16 @@ class Section(param.Parameterized):
         )
 
     def add_channel(self, C, x=None):
-        """Add channel to the section
-        C: type channel
-        position : relative position along the section (between 0 and 1),
-        if None (default) the channels is treated as a continuous density channel
-        giving a surfacic current in nA/μm2
+        """Add a channel to the section
+
+        Parameters
+        ----------
+        C: Channel
+        x: Float, optional
+            relative position along the section (between 0 and 1),
+            if None (default) the channels is treated as a continuous density channel
+            giving a surfacic current in nA/μm2
+
         """
         if not issubclass(type(C), Channel):
             raise ValueError("Must be a channel (sinaps.Channel)")
@@ -680,6 +686,22 @@ class Section(param.Parameterized):
         """Clear all channels"""
         self.channels_c = []
         self.channels_p = []
+
+    def add_voltage_source(self, C, x=0):
+        """Add a voltage source to the section
+
+        Parameters
+        ----------
+        V: VoltageSource
+        x : Flaot, optional
+            relative position along the section (between 0 and 1),
+
+        """
+        if not issubclass(type(C), VoltageSource):
+            raise ValueError("Must be a channel (sinaps.VoltageSource)")
+        C = deepcopy(C)
+        C.position = x
+        self.Vsource.append(C)
 
     @property
     def channels(self):
@@ -943,6 +965,13 @@ class _SimuChannel:
                     np.s_[self.idV, k],
                     (self.J(ion, V, *S, t, **self.params) * self.k).squeeze(),
                 )
+
+
+class VoltageSource:
+    """Represents a Voltage Source V = f(t)"""
+
+    def __init__(self, f):
+        self.V = njit(f)
 
 
 @jitclass({"charge": int8, "D": float32})

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from sinaps.core.model import Section, Neuron
+from sinaps.core.model import Section, Neuron, VoltageSource
 from sinaps.core.channels import ConstantCurrent
 from sinaps.core.species import Species
 import numpy as np
@@ -41,6 +41,15 @@ def test_section_add_channel(section, channel):
     section.add_channel(channel, 1)
     assert len(section.channels) == 2
     assert section.channels[1].position == 1
+
+
+def test_section_add_voltage_source(section):
+    c = VoltageSource(lambda x: 1)
+    s = Section()
+    s.add_voltage_source(c)
+    assert len(s.Vsource) == 1
+    s.add_voltage_source(c, 0.23)
+    assert s.Vsource[1].position == 0.23
 
 
 def test_section_c_m():
