@@ -58,6 +58,7 @@ class SimuView:
             height=600,
             tools=["hover"],
             cmap="fire",
+            colorbar=True,
         )
 
     def V_field(self, **kwargs):
