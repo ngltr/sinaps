@@ -131,7 +131,7 @@ class Neuron(param.Parameterized):
         return self._graph
 
     @property
-    def sections(self, traversal=None):
+    def sections(self):
         G = self.graph
         if self.__traversal_func__ is None:
             edges = G.edges
@@ -186,11 +186,11 @@ class Neuron(param.Parameterized):
 
         >>> nrn.add_species(Species.Ca)
 
-        Add species `Ca` with initial concentration 1 mMol/L:
+        Add species `Ca` with initial concentration 1 mMol/L and difusion coeficient  1 𝜇𝑚^2/ms:
 
         >>> nrn = Neuron([(0,1)])
-        >>> nrn.add_species(Species.Ca, C0=1)
-        >>> nrn.sections
+        >>> nrn.add_species(Species.Ca, C0=1, D=1)
+
 
         """
         C0 = C0 if C0 is not None else self.DEFAULT_CONCENTRATION
