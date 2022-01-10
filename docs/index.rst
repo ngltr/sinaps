@@ -47,6 +47,7 @@ Site map
     data_structure
     plotting
     customizing_channels
+    model
     api_reference
     GitHub <https://github.com/ngltr/sinaps>
 
