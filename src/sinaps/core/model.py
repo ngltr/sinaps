@@ -131,7 +131,7 @@ class Neuron(param.Parameterized):
         return self._graph
 
     @property
-    def sections(self, traversal=None):
+    def sections(self):
         G = self.graph
         if self.__traversal_func__ is None:
             edges = G.edges
@@ -186,11 +186,11 @@ class Neuron(param.Parameterized):
 
         >>> nrn.add_species(Species.Ca)
 
-        Add species `Ca` with initial concentration 1 mMol/L:
+        Add species `Ca` with initial concentration 1 mMol/L and difusion coeficient  1 𝜇𝑚^2/ms:
 
         >>> nrn = Neuron([(0,1)])
-        >>> nrn.add_species(Species.Ca, C0=1)
-        >>> nrn.sections
+        >>> nrn.add_species(Species.Ca, C0=1, D=1)
+
 
         """
         C0 = C0 if C0 is not None else self.DEFAULT_CONCENTRATION
@@ -823,7 +823,7 @@ class Section(param.Parameterized):
         return np.diff(self.xb) * self._param_array(self.a) * 2 * PI  # [um2]
 
     def _r_l_array(self):
-        """Return the longitunal resistance between each nodes
+        """Return the longitudinal resistance between each nodes
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
@@ -834,7 +834,7 @@ class Section(param.Parameterized):
         )  # [MΩ]
 
     def _r_l_end(self):
-        """Return the longitunal resistance between the start/end of the section
+        """Return the longitudinal resistance between the start/end of the section
         and the first/last node
         init_sim(dx) must have been previously called
         """
