@@ -12,6 +12,7 @@ CHANNEL_LIST = [
     ch.NMDAR(1),
     ch.HeavysideCurrent(5, 1, 2),
     ch.Hodgkin_Huxley(),
+    ch.Hodgkin_Huxley_red(),
     ch.Hodgkin_Huxley_Ca(),
     ch.LeakChannel(),
 ]

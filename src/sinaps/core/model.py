@@ -787,7 +787,8 @@ class Section(param.Parameterized):
         """
         # np.diff(self.xb) = size of compartiment
         for c in self.channels:
-            S0[np.hstack(c.idS)] = c.__S0(len(self.x))
+            if c.nb_var: 
+                S0[np.hstack(c.idS)] = c.__S0(len(self.x))
 
     def _fill_C0_array(self, C0, ions):
         """Return the initial concentration for each nodes
