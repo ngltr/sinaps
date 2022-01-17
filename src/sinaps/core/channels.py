@@ -153,16 +153,11 @@ class Hodgkin_Huxley(Channel):
     @staticmethod
     def _J(ion,V,n,m,h,t,
           gNa,V_Na,gK,V_K,gL,V_L):
-        I_L = gL * (V - V_L)
-        J_L_in= np.max(I_L,0)/96.48533132838746
-        J_L_out= - np.max(-I_L,0)/96.48533132838746
         
         if ion is Species.Na:
-            return (gNa * m**3 * h * (V -  V_Na))/96.48533132838746 + 0.95*J_L_in
+            return (gNa * m**3 * h * (V -  V_Na))/96.48533132838746
         elif ion is Species.K:
-            return (gK * n**4 * (V - V_K))/96.48533132838746 + J_L_out 
-        elif ion is Species.Ca: 
-            return 0.05*J_L_in/2
+            return (gK * n**4 * (V - V_K))/96.48533132838746
         else:
             return 0*V
 
