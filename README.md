@@ -7,7 +7,7 @@
 
 `Sinaps` is a Python package providing a fast, flexible and expressive tool to model signal propagation and ionic electrodiffusion in neurons. It is an efficient framework to build computational models of voltage and calcium dynamics. It is based on the Cable theory for voltage propagation, and the Nernst-Planck equation for the electrodiffusion of ions.
 
-<img src="docs/_static/bAP.gif" width="700" /> ![image](docs/_static/colorbar.png)
+<img src="docs/_static/bAP.gif" width="700" /> <img src="docs/_static/colorbar.png" height="650" />
 
 *Figure 1 :*  **Voltage propagation in neuron triggered by synaptic action potential**
 
