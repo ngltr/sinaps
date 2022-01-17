@@ -32,7 +32,7 @@ class ConstantCurrent(Channel):
         )
 
 
-class HeavysideCurrent(Channel):
+class PulseCurrent(Channel):
     """Channel with a constant current between a time period.
 
     Parameters
@@ -113,53 +113,56 @@ class Hodgkin_Huxley(Channel):
         [mV] Equilibrium potential of leak channel
 
     """
+
     nb_var = 3
-    param_names=('gNa','V_Na','gK','V_K','gL','V_L')
+    param_names = ("gNa", "V_Na", "gK", "V_K", "gL", "V_L")
 
-    def __init__(self, gNa=120, V_Na=115, gK =36, V_K=-12, gL=0.3 ,V_L=10.6):
+    def __init__(self, gNa=120, V_Na=115, gK=36, V_K=-12, gL=0.3, V_L=10.6):
         """Channel Hodgkin Huxley type
-            gNa : conductance of sodium channel [mS/cm2]
-            V_Na : Equilibrium potential of sodium channel [mV]
-            gK :  conductance of potasium channel [mS/cm2]
-            V_K : Equilibrium potential of potasium channel [mV]
-            gL :  conductance of leak channel [mS/cm2]
-            V_L : Equilibrium potential of leak channel [mV]
+        gNa : conductance of sodium channel [mS/cm2]
+        V_Na : Equilibrium potential of sodium channel [mV]
+        gK :  conductance of potasium channel [mS/cm2]
+        V_K : Equilibrium potential of potasium channel [mV]
+        gL :  conductance of leak channel [mS/cm2]
+        V_L : Equilibrium potential of leak channel [mV]
         """
-        self.params={'gNa' : gNa / 100, # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-                    'V_Na' : V_Na,
-                    'gK' : gK / 100, # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-                    'V_K' : V_K,
-                    'gL' : gL / 100, # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-                    'V_L' : V_L,
-                    }
-
+        self.params = {
+            "gNa": gNa / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+            "V_Na": V_Na,
+            "gK": gK / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+            "V_K": V_K,
+            "gL": gL / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+            "V_L": V_L,
+        }
 
     @staticmethod
-    def _I(V,n,m,h,t,
-           gNa,V_Na,gK,V_K,gL,V_L):
-        I_Na = gNa * m**3 * h * (V -  V_Na)
-        I_K = gK * n**4 * (V - V_K)
+    def _I(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+        I_Na = gNa * m ** 3 * h * (V - V_Na)
+        I_K = gK * n ** 4 * (V - V_K)
         I_L = gL * (V - V_L)
-        return - I_Na - I_K - I_L
+        return -I_Na - I_K - I_L
 
     @staticmethod
-    def _dS(V,n,m,h,t,
-            gNa,V_Na,gK,V_K,gL,V_L):
-        dn = 0.1 * (1 - 0.1 * V) * (1-n)/(np.exp(1-0.1*V)-1) - 0.125 * np.exp(-V/80)*n
-        dm = (2.5-0.1*V)*(1-m)/(np.exp(2.5-0.1*V)-1) - 4*np.exp(-V/18)*m
-        dh = 0.07*np.exp(-V/20)*(1-h) - h/(np.exp(3-0.1*V)+1)
-        return dn,dm,dh
-    
+    def _dS(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+        dn = (
+            0.1 * (1 - 0.1 * V) * (1 - n) / (np.exp(1 - 0.1 * V) - 1)
+            - 0.125 * np.exp(-V / 80) * n
+        )
+        dm = (2.5 - 0.1 * V) * (1 - m) / (np.exp(2.5 - 0.1 * V) - 1) - 4 * np.exp(
+            -V / 18
+        ) * m
+        dh = 0.07 * np.exp(-V / 20) * (1 - h) - h / (np.exp(3 - 0.1 * V) + 1)
+        return dn, dm, dh
+
     @staticmethod
-    def _J(ion,V,n,m,h,t,
-          gNa,V_Na,gK,V_K,gL,V_L):
-        
+    def _J(ion, V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+
         if ion is Species.Na:
-            return (gNa * m**3 * h * (V -  V_Na))/96.48533132838746
+            return (gNa * m ** 3 * h * (V - V_Na)) / 96.48533132838746
         elif ion is Species.K:
-            return (gK * n**4 * (V - V_K))/96.48533132838746
+            return (gK * n ** 4 * (V - V_K)) / 96.48533132838746
         else:
-            return 0*V
+            return 0 * V
 
     def S0(self):
         """Return the initial value for the state variable
@@ -167,12 +170,13 @@ class Hodgkin_Huxley(Channel):
         m = 0.0526
         h = 0.5734
         """
-        return 0.317,0.0526,0.5734
-        
+        return 0.317, 0.0526, 0.5734
+
+
 class Hodgkin_Huxley_red(Channel):
     """Hodgkin Huxley channel reduced version.
-    
-    Simplification of the classical HH, with m = m_{\infty}, and h = 0.89 - 1.1 n 
+
+    Simplification of the classical HH, with m = m_{\infty}, and h = 0.89 - 1.1 n
     (see Mathematical Physiology, Keener J. and Sneyd J., chap.5)
 
     Parameters

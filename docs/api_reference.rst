@@ -24,4 +24,4 @@ Channels
 .. autoclass:: sinaps.Channel
    :members: 
 .. automodule:: sinaps.channels
-   :members: ConstantCurrent, HeavysideCurrent, LeakChannel, Hodgkin_Huxley, Hodgkin_Huxley_red, Hodgkin_Huxley_Ca, AMPAR, NMDAR
+   :members: ConstantCurrent, PulseCurrent, LeakChannel, Hodgkin_Huxley, Hodgkin_Huxley_red, Hodgkin_Huxley_Ca, AMPAR, NMDAR
