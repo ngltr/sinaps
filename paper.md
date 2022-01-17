@@ -40,11 +40,11 @@ of synaptic activity, and distinguish in the calcium signals the different calci
 
 Here, we present `Sinaps`, which is an easy-to-use Python library to simulate voltage propagation, ionic electrodiffusion and chemical reactions in neurons. 
 
-![Left: a complete neuronal geometry created using `Sinaps`. Right: Voltage propagation in a dendritic tree.\label{fig:volt}](Fig.png)
+![Left: a complete neuronal geometry created using `Sinaps`. Right: Simulation of voltage propagation in a dendritic tree.\label{fig:volt}](Fig.png)
 
 # Statement of need
 
-Numerous softwares has been designed to realize simulations of voltage dynamics and ion concentration in neurons [@Bower:1998 ; @Carnevale:2006]. Most of those softwares are using the Cable theory model, and are designed toward neuronal networks simulation. Models for ion concentration dynamics in neurons, based on the Nernst-Planck model coupled to specific equations describing the potential, are also available [@Saetra:2020 ; @Solbra:2018]. 
+Numerous softwares have been designed to realize simulations of voltage dynamics and ion concentration in neurons [@Bower:1998 ; @Carnevale:2006]. Most of those softwares are using the Cable theory model, and are designed toward neuronal network simulation. Models for ion concentration dynamics in neurons, based on the Nernst-Planck model coupled to specific equations describing the potential, are also available [@Saetra:2020 ; @Solbra:2018]. 
 
 Among these models, the `Sinaps` library is designed to realize the fast computation of voltage propagation and ionic electrodiffusion in complex neuronal geometries, at a fine spatial scale. It is based on the Cable equation for voltage propagation, coupled to a one-dimensional Nernst-Planck equation for ionic electrodiffusion. The library can be used to build custom set-ups, with easy access to all the variables. Finally, the class structure renders the code easily editable.
 
