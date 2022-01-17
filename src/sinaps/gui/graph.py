@@ -45,7 +45,7 @@ class SimuView:
     def field_plot(self, df, title, time=None, res=None, neuron=True, dynamic=True):
         # res : resolution : #um
         nrn = self.simu.N
-        #### field plot
+        # field plot
         if time is not None:
             df = df[slice(*time)]
         dfi = interpolate.interp1d(
@@ -71,7 +71,7 @@ class SimuView:
         if not neuron:
             return p_field
         else:
-            #### Neuron representation
+            # Neuron representation
             g_2 = nx.Graph()
             edges = nrn.sections.values()
             ej = nrn.__traversal_source__
@@ -130,7 +130,7 @@ class SimuView:
                 return p_graph + p_line + p_field
             else:
 
-                #### Dynamic selection
+                # Dynamic selection
 
                 Branch = hv.streams.Stream.define("branch", branch=None)
                 branch_stream = Branch()
@@ -158,6 +158,7 @@ class SimuView:
 
                 # Interactivity with pointer position
                 pos = p_graph.data.groupby("branch").min("x")["x"].sort_index()
+                pos[pos.index[-1] + 1] = x
 
                 def branch_update(y):
                     if y < 0 or y > x:

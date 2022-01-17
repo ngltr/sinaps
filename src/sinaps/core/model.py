@@ -117,14 +117,14 @@ class Neuron(param.Parameterized):
         self._x = None
         self._y = None
         self._graph = nx.Graph()
+        self.__traversal_source__ = None
+        self.__traversal_func__ = nx.dfs_edges
         if sections is not None:
             if issubclass(type(sections), dict):
                 self.add_sections_from_dict(sections)
             else:
                 self.add_sections_from_list(sections)
-
-        self.__traversal_func__ = nx.dfs_edges
-        self.__traversal_source__ = None
+            self.__traversal_source__ = list(self.sections.values())[0][0]
 
     @property
     def graph(self):
@@ -787,7 +787,7 @@ class Section(param.Parameterized):
         """
         # np.diff(self.xb) = size of compartiment
         for c in self.channels:
-            if c.nb_var: 
+            if c.nb_var:
                 S0[np.hstack(c.idS)] = c.__S0(len(self.x))
 
     def _fill_C0_array(self, C0, ions):
