@@ -4,3 +4,5 @@ pillow>=7.1.0
 ipykernel
 sphinx-book-theme
 bokeh == 2.4.0
+param
+myst-parser
