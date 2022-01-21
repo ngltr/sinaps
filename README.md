@@ -1,6 +1,7 @@
 [![status](https://joss.theoj.org/papers/d47fbf887ce21cf686a56bac1b36817e/status.svg)](https://joss.theoj.org/papers/d47fbf887ce21cf686a56bac1b36817e)
 [![status](https://img.shields.io/pypi/v/sinaps?color=green)](https://pypi.org/project/SiNAPS/)
 [![status](https://github.com/ngltr/sinaps/workflows/pytest/badge.svg)](https://github.com/ngltr/sinaps/actions/workflows/python-app.yml)
+[![Documentation Status](https://readthedocs.org/projects/sinaps/badge/?version=latest)](https://sinaps.readthedocs.io/en/latest/?badge=latest)
 
 
 # SiNAPS
