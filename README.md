@@ -13,7 +13,7 @@
 
 ## Documentation
 
-See the [documentation](https://math.unice.fr/~guerrier/sinaps_doc)
+See the [documentation](http://sinaps.rtfd.io)
 
 ## Installation
 
