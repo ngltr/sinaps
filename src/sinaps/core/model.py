@@ -149,6 +149,8 @@ class Neuron(param.Parameterized):
         if not issubclass(type(sec), Section):
             raise ValueError("Must be a section (sinaps.Section)")
         self.graph.add_edge(i, j, section=sec)
+        if self.__traversal_source__ is None:
+            self.__traversal_source__ = i
 
     def add_sections_from_dict(self, sections):
         """Add multiple sections from dictionnary {sec:(i,j)}."""
