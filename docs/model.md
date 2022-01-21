@@ -1,5 +1,4 @@
-Model Description
------------------
+## Model Description
 
 To model voltage propagation and ionic electrodiffusion in the *Sinaps*
 python package, we consider the Cable equation [1] for voltage
@@ -42,14 +41,13 @@ $j^{i, \text{m}}$ represents the lineic flux of ions entering from the
 channels \[mol.s$^{-1}$.m$^{-1}$\]. $\gamma^{i,\text{chem}}$ represents
 the variations of concentration due to the eventual chemical reactions.
 
-Notations
----------
+### Notations
 
 In one branch going between $\tilde{x}_0 \leq x \leq \tilde{x}_L$, we
 consider different positions
 $\tilde{x}_0 < \tilde{x}_1<...< \tilde{x}_n <...< \tilde{x}_N < \tilde{x}_{N+1} = \tilde{x}_L$.
 We then define $x_n$ as the middle point between $\tilde{x}_n$ and
-$\tilde{x}_{n+1}$ (see Fig. [1]). Finally, we define the elementary domains
+$\tilde{x}_{n+1}$ (see Fig. [1]). Finally, we define the elementary domains
 $E_n$, $n = 0..N$, with boundaries $\tilde{x}_n$ and $\tilde{x}_{n+1}$.
 The domains $E_n$ are portions of cylinders, with radius $a_n$, centered
 around $x_n$, with length
@@ -66,8 +64,7 @@ branch.</figcaption>
 </br>
 
 
-Derivation of the discretized Cable equation in branches 
---------------------------------------------------------
+### Derivation of the discretized Cable equation in branches 
 
 We derive the discretized Cable equation for voltage dynamics along one
 branch. We evaluate the potentials $V_n$, $n = 0..N$ at each point
@@ -157,8 +154,7 @@ $$\begin{aligned}
 \frac{\partial V}{\partial x}(t,0) = 0\\
 \frac{\partial V}{\partial x}(t,L) = 0\end{aligned}$$
 
-Derivation of the discretized Cable equation at junctions
----------------------------------------------------------
+### Derivation of the discretized Cable equation at junctions
 
 ![Junction](Junction.png)
 <figcaption>Fig. 3: <b>Strategy at branches junction.</b> We introduce a virtual point $x_p$,
@@ -171,7 +167,7 @@ To derive the discretized equation at the junction between three
 branches, we introduce a virtual point $x_p$ in the middle of the
 junction. We consider that the junction is located at the
 end of branch $0$, and at the start of branch $1$ and $2$ (see
-Fig. [3]). We define the resistive current between the point $x_N^0$, the last point
+Fig. [3]). We define the resistive current between the point $x_N^0$, the last point
 in branch $0$, and $x_p$. The same way between $x_1^1$ and $x_1^2$, the
 first points of branches $1$ and $2$ respectively and $x_p$. We obtain:
 
@@ -194,8 +190,7 @@ $$C_N^0 \frac{d V_N^0(t)}{dt} = I_N^{G,0}(t) + \frac{V_{N}^0 -  V_{N-1}^0}{R_{N-
 This set of coupled linear equations for the voltage is then solved
 using the BDF solver.
 
-Derivation of the discretized Nernst-Planck equation
-----------------------------------------------------
+### Derivation of the discretized Nernst-Planck equation
 
 Using the same formalism as before, we discretize the Nernst-Planck
 equation. To simplify the notations, we will consider in this section
@@ -216,8 +211,7 @@ $j_n^{i,m}$ is the flow of ions of species $i$ coming from channels (in
 The chemical flux $\gamma_n^{i, \text{chem}}$ will be
 described in the next section.
 
-Implementation of chemical reactions 
-------------------------------------
+### Implementation of chemical reactions 
 
 The model equation for chemical reactions is the classical chemical
 equations. Considering the reaction 
@@ -245,8 +239,7 @@ $$\gamma_n^{B_i,\text{chem}} = \beta_i (v_n^f - v_n^b)$$
 
 for the products $B_i$.
 
-Bibliography 
-------------
+### Bibliography 
 
 
 [1] Tuckwell HC, *Introduction to Theoretical Neurobiology*, Cambridge University Press, 1988
