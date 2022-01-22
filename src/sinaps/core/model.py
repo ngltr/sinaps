@@ -117,21 +117,21 @@ class Neuron(param.Parameterized):
         self._x = None
         self._y = None
         self._graph = nx.Graph()
+        self.__traversal_source__ = None
+        self.__traversal_func__ = nx.dfs_edges
         if sections is not None:
             if issubclass(type(sections), dict):
                 self.add_sections_from_dict(sections)
             else:
                 self.add_sections_from_list(sections)
-
-        self.__traversal_func__ = nx.dfs_edges
-        self.__traversal_source__ = None
+            self.__traversal_source__ = list(self.sections.values())[0][0]
 
     @property
     def graph(self):
         return self._graph
 
     @property
-    def sections(self, traversal=None):
+    def sections(self):
         G = self.graph
         if self.__traversal_func__ is None:
             edges = G.edges
@@ -149,6 +149,8 @@ class Neuron(param.Parameterized):
         if not issubclass(type(sec), Section):
             raise ValueError("Must be a section (sinaps.Section)")
         self.graph.add_edge(i, j, section=sec)
+        if self.__traversal_source__ is None:
+            self.__traversal_source__ = i
 
     def add_sections_from_dict(self, sections):
         """Add multiple sections from dictionnary {sec:(i,j)}."""
@@ -186,11 +188,11 @@ class Neuron(param.Parameterized):
 
         >>> nrn.add_species(Species.Ca)
 
-        Add species `Ca` with initial concentration 1 mMol/L:
+        Add species `Ca` with initial concentration 1 mMol/L and difusion coeficient  1 𝜇𝑚^2/ms:
 
         >>> nrn = Neuron([(0,1)])
-        >>> nrn.add_species(Species.Ca, C0=1)
-        >>> nrn.sections
+        >>> nrn.add_species(Species.Ca, C0=1, D=1)
+
 
         """
         C0 = C0 if C0 is not None else self.DEFAULT_CONCENTRATION
@@ -787,9 +789,8 @@ class Section(param.Parameterized):
         """
         # np.diff(self.xb) = size of compartiment
         for c in self.channels:
-            s0 = c.__S0(len(self.x))
-            for k in range(c.nb_var):
-                S0[c.idS[k]] = s0[k]
+            if c.nb_var:
+                S0[np.hstack(c.idS)] = c.__S0(len(self.x))
 
     def _fill_C0_array(self, C0, ions):
         """Return the initial concentration for each nodes
@@ -823,7 +824,7 @@ class Section(param.Parameterized):
         return np.diff(self.xb) * self._param_array(self.a) * 2 * PI  # [um2]
 
     def _r_l_array(self):
-        """Return the longitunal resistance between each nodes
+        """Return the longitudinal resistance between each nodes
         init_sim(dx) must have been previously called
         """
         # np.diff(self.x) = distance between centers of compartiment
@@ -834,7 +835,7 @@ class Section(param.Parameterized):
         )  # [MΩ]
 
     def _r_l_end(self):
-        """Return the longitunal resistance between the start/end of the section
+        """Return the longitudinal resistance between the start/end of the section
         and the first/last node
         init_sim(dx) must have been previously called
         """

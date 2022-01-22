@@ -1,6 +1,6 @@
 from .core.model import Section, Channel, VoltageSource
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __all__ = [
     "Section",
     "Channel",
@@ -34,7 +34,6 @@ try:
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.plot = SimuView(self)
-
 
 except ModuleNotFoundError:  # nogui
     from .data.data import Neuron

@@ -23,7 +23,7 @@ copyright = "GNU GENERAL PUBLIC LICENSE"
 author = "Claire Guerrier & Nicolas Galtier"
 
 # The full version, including alpha/beta/rc tags
-release = "0.2"
+release = "0.3"
 
 import param
 
@@ -36,7 +36,7 @@ param.parameterized.docstring_describe_params = False
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "nbsphinx"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "nbsphinx", "myst_parser"]
 nbsphinx_allow_errors = True
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

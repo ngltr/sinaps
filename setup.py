@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="SiNAPS",
-    version="0.2.0",
+    version="0.3.0",
     author="Claire Guerrier",
     author_email="claire.guerrier@univ-cotedazur.fr",
     description="Neuronal simulation package",
