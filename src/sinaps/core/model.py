@@ -21,7 +21,7 @@ from numba import njit
 from numba.experimental import jitclass
 from numba import int8, float32
 from quantiphy import Quantity
-from scipy.sparse import dia_matrix
+from scipy.sparse import dia_matrix, csr_matrix
 from scipy import interpolate
 import param
 import networkx as nx
@@ -40,6 +40,17 @@ class InitialConcentrationError(ValueError):
         super().__init__(
             """No initial concentration defined for the ion {}
                define it using [section].C0=dict([ion]=[initial_concentration])
+                    """.format(
+                ion
+            )
+        )
+
+
+class DiffusionCoefficientError(ValueError):
+    def __init__(self, ion):
+        super().__init__(
+            """No diffusion coeficient defined for the ion {}
+               define it using [section].D=dict([ion]=[initial_concentration])
                     """.format(
                 ion
             )
@@ -204,7 +215,7 @@ class Neuron(param.Parameterized):
                     if sp in D:
                         sec.D[sp] = D[sp]
                     else:
-                        raise InitialConcentrationError(sp)  # TODO
+                        raise DiffusionCoefficientError(sp)
 
     def add_reaction(self, left, right, k1, k2):
         """Add chemical reaction to the Neuron.
@@ -287,6 +298,16 @@ class Neuron(param.Parameterized):
             ch.k = np.concatenate(surface)[:, np.newaxis]
             cch[ch_cls] = ch
         return cch
+
+    def _all_Vsource(self):
+        """Return voltage source objects suitable for the simulation."""
+        v_source = [c for s in self.sections for c in s.Vsource]
+        row = np.array([v.idV for v in v_source], int)
+        col = np.ones((1, len(v_source)), int)
+        data = np.ones_like(row)
+        col = np.zeros_like(row)
+        source_mat = csr_matrix((data, (row, col)), (self.nb_comp, 1))
+        return v_source, source_mat
 
     def _capacitance_array(self):
         """Return the menbrane capacitance for each nodes.
@@ -599,6 +620,7 @@ class Section(param.Parameterized):
         Section._next_id += 1
         self.channels_c = []
         self.channels_p = []
+        self.Vsource = []
 
     @property
     def _C_m(self):
@@ -636,19 +658,24 @@ class Section(param.Parameterized):
             Quantity(self.L * 1e-6, "m"),
             Quantity(self.a * 1e-6, "m"),
             Quantity(self.C_m * 1e-6, "F/cm²"),
-            Quantity(self.c_m * 1e-12, "F"),
+            Quantity(self.c_m * 1e-12, "F/μm"),
             Quantity(self.R_l, "Ω.cm"),
-            Quantity(self.r_l * 1e-12, "Ω"),
+            Quantity(self.r_l * 1e-12, "Ω/μm"),
             "\n  + ".join([str(c) for c in self.channels_c]),
             "\n  + ".join(["{}:{}".format(c.position, c) for c in self.channels_p]),
         )
 
     def add_channel(self, C, x=None):
-        """Add channel to the section
-        C: type channel
-        position : relative position along the section (between 0 and 1),
-        if None (default) the channels is treated as a continuous density channel
-        giving a surfacic current in nA/μm2
+        """Add a channel to the section
+
+        Parameters
+        ----------
+        C: Channel
+        x: Float, optional
+            relative position along the section (between 0 and 1),
+            if None (default) the channels is treated as a continuous density channel
+            giving a surfacic current in nA/μm2
+
         """
         if not issubclass(type(C), Channel):
             raise ValueError("Must be a channel (sinaps.Channel)")
@@ -669,6 +696,22 @@ class Section(param.Parameterized):
         """Clear all channels"""
         self.channels_c = []
         self.channels_p = []
+
+    def add_voltage_source(self, C, x=0):
+        """Add a voltage source to the section
+
+        Parameters
+        ----------
+        V: VoltageSource
+        x : Flaot, optional
+            relative position along the section (between 0 and 1),
+
+        """
+        if not issubclass(type(C), VoltageSource):
+            raise ValueError("Must be a channel (sinaps.VoltageSource)")
+        C = deepcopy(C)
+        C.position = x
+        self.Vsource.append(C)
 
     @property
     def channels(self):
@@ -701,6 +744,8 @@ class Section(param.Parameterized):
         self.xb = np.linspace(0, self.L, n + 1)
         self.idV = idV0 + np.array(range(n), int)
         idS0 = idS00
+        for c in self.Vsource:
+            c.idV = idV0 + int(min(c.position * n, n - 1))
         for c in self.channels_c:
             c.idS = [k * n + idS0 + np.array(range(n), int) for k in range(c.nb_var)]
             c.idV = self.idV
@@ -932,6 +977,13 @@ class _SimuChannel:
                     np.s_[self.idV, k],
                     (self.J(ion, V, *S, t, **self.params) * self.k).squeeze(),
                 )
+
+
+class VoltageSource:
+    """Represents a Voltage Source V = f(t)"""
+
+    def __init__(self, f):
+        self.V = njit(f)
 
 
 @jitclass({"charge": int8, "D": float32})
