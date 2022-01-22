@@ -26,9 +26,19 @@ def read_comp_imaging(filename):
 
 
 def read_swc(filename):
-    """Return a Neuron from a swc file
+    """Return a neuron from a swc file
 
-    www.neuronland.org/NLMorphologyConverter/MorphologyFormats/SWC/Spec.html
+    See swc specification at www.neuronland.org/NLMorphologyConverter/MorphologyFormats/SWC/Spec.html
+
+    Parameters
+    ----------
+    filename : filename or url to swc file
+
+    Examples
+    -------
+    Create a neuron `nrn` from swc file `neuron.swc`:
+
+    >>> nrn = read_swc('neuron.swc)
 
     """
     df = pd.read_csv(

@@ -25,3 +25,8 @@ Channels
    :members: 
 .. automodule:: sinaps.channels
    :members: ConstantCurrent, PulseCurrent, LeakChannel, Hodgkin_Huxley, Hodgkin_Huxley_red, Hodgkin_Huxley_Ca, AMPAR, NMDAR
+
+I/O
+======================
+.. automodule:: sinaps.io
+   :members: read_swc
