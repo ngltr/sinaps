@@ -6,3 +6,4 @@ sphinx-book-theme
 bokeh == 2.4.0
 param
 myst-parser
+matplotlib
