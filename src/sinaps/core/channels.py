@@ -353,17 +353,18 @@ class AMPAR(Channel):
         """
         Return the flux of ion [aM/ms/um2] of the mechanism towards inside
         """
-        if ion is Species.Ca:
-            return ((t <= t0 + 20) & (t >= t0)) * np.maximum(
-                -gampa
-                * (1 - np.exp(-np.abs(t - t0) / tampa1))
-                * np.exp(-np.abs(t - t0) / tampa2)
-                * (V - V_ampa)
-                / 96.48533132838746
-                / 2
-                * 0.014,
-                0,
-            )
+        J = ((t <= t0 + 20) & (t >= t0)) * np.maximum(
+            -gampa
+            * (1 - np.exp(-np.abs(t - t0) / tampa1))
+            * np.exp(-np.abs(t - t0) / tampa2)
+            * (V - V_ampa)
+            / 96.48533132838746
+            / 2
+            * 0.014,
+            0,
+        )
+        if ion is Species.Na:
+            return J
         else:
             return 0 * V
 
@@ -416,7 +417,7 @@ class NMDAR(Channel):
         """
         Return the flux of ion [aM/ms/um2] of the mechanism towards inside
         """
-        if ion is Species.Ca:
+        if ion is Species.Na:
             return ((t <= t0 + 50) & (t >= t0)) * np.maximum(
                 -gnmda
                 * (np.exp(-np.abs(t - t0) / tnmda1) - np.exp(-np.abs(t - t0) / tnmda2))
@@ -424,7 +425,7 @@ class NMDAR(Channel):
                 * (V - V_nmda)
                 / 96.48533132838746
                 / 2
-                * 0.15,
+                * 1,
                 0,
             )
         else:
