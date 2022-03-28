@@ -62,7 +62,7 @@ class Simulation:
         self.sol_diff = dict()
         self.progressbar = progressbar
 
-    def run(
+    def run_c(
         self,
         t_span,
         species=None,
