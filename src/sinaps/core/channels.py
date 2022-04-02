@@ -60,6 +60,13 @@ class PulseCurrent(Channel):
     def _I(V, t, current, t0, tf):
         return ((t <= tf) & (t >= t0)) * current
 
+    @staticmethod
+    def _J(ion, V, t, current, t0, tf):
+        if ion is Species.Na:
+            return ((t <= tf) & (t >= t0)) * current / 96.48533132838746
+        else:
+            return 0 * V
+
 
 class LeakChannel(Channel):
     """Leak channel  I = (V-Veq) * G_m.
@@ -244,6 +251,8 @@ class Hodgkin_Huxley_red(Channel):
             return -I_Na / 96.48533132838746
         elif ion is Species.K:
             return -I_K / 96.48533132838746
+        elif ion is Species.Cl:
+            return +gL * (V - V_L) / 96.48533132838746
         else:
             return 0 * V
 
@@ -359,7 +368,6 @@ class AMPAR(Channel):
             * np.exp(-np.abs(t - t0) / tampa2)
             * (V - V_ampa)
             / 96.48533132838746
-            / 2
             * 0.014,
             0,
         )
@@ -424,7 +432,6 @@ class NMDAR(Channel):
                 / (1 + 0.33 * 2 * np.exp(-0.06 * (V - 65)))
                 * (V - V_nmda)
                 / 96.48533132838746
-                / 2
                 * 1,
                 0,
             )
