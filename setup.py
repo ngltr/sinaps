@@ -19,6 +19,6 @@ setuptools.setup(
         "networkx",
         "datashader",
         "tqdm",
-        "numba",
+        "numba>=0.49",
     ],
 )
