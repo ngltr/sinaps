@@ -10,7 +10,7 @@ setuptools.setup(
     package_dir={"": "src"},
     python_requires=">=3.6",
     install_requires=[
-        "numpy<=1.20",
+        "numpy",
         "param==1.10.0",
         "pandas",
         "quantiphy",
@@ -19,6 +19,6 @@ setuptools.setup(
         "networkx",
         "datashader",
         "tqdm",
-        "numba>=0.49",
+        "numba>=0.55",
     ],
 )
