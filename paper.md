@@ -40,7 +40,7 @@ of synaptic activity, and distinguish in the calcium signals the different calci
 
 Here, we present `Sinaps`, which is an easy-to-use Python library to simulate voltage propagation, ionic electrodiffusion and chemical reactions in neurons. 
 
-![Left: a complete neuronal geometry created using `Sinaps`. Right: Simulation of voltage propagation in a dendritic tree.\label{fig:volt}](Fig.png)
+![Left: a complete neuronal geometry created using `Sinaps`. Right: Simulation of voltage propagation in the dendritic tree represented in Left. The color code in the middle maps the structure of the geometry on the left, to the vertical position on the right.\label{fig:volt}](Fig1.png)
 
 # Statement of need
 
