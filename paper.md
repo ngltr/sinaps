@@ -14,7 +14,7 @@ authors:
     orcid: 0000-0002-1128-1069 
     affiliation: "1" #
 affiliations:
- - name: CNRS, LJAD, Université Côte d'Azur
+ - name: CRM - IRL3457, LJAD Université Côte d'Azur
    index: 1
  - name: Independent Researcher
    index: 2
