@@ -1,6 +1,6 @@
 from .core.model import Section, Channel, VoltageSource
 
-__version__ = "0.3.0"
+__version__ = "0.3.2"
 __all__ = [
     "Section",
     "Channel",
