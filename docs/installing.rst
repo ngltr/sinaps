@@ -5,7 +5,7 @@ Installation
 Via Python Package
 ==================
 
-Install the package and required dependencies with:
+Install the package and required dependencies using:
 
 .. code:: bash
 
@@ -14,20 +14,20 @@ Install the package and required dependencies with:
 Installation troubleshooting
 ============================
 
-Sometimes the installation fails because of dependency conflicts or old version of already installed librairies
-First you can try to upgrade pip, in order to use the newest method to resolve dependency conflicts :
+The installation may fail due to conflicts in the dependencies, or due to old version of already installed librairies.
+First you can try to upgrade pip, to use the newest method to resolve dependency conflicts:
 
 .. code:: bash
 
     pip install pip --upgrade
     
-If you cannot upgrade pip you can try :
+If you cannot upgrade pip, you may try:
 
 .. code:: bash
 
     pip install sinaps --use-feature=2020-resolver
 
-If it conflicts with other dependencies requirement of your own environment, you could try to install sinaps in a virtual environment :
+If it conflicts with other dependencies requirement of your own environment, you could try to install sinaps in a virtual environment:
 
 .. code:: bash
 
