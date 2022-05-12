@@ -23,7 +23,7 @@ copyright = "GNU GENERAL PUBLIC LICENSE"
 author = "Claire Guerrier & Nicolas Galtier"
 
 # The full version, including alpha/beta/rc tags
-release = "0.3"
+release = "0.3.2"
 
 import param
 
