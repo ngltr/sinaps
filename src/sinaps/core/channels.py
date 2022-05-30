@@ -1,5 +1,4 @@
 # coding: utf-8
-
 import numpy as np
 from quantiphy import Quantity
 
@@ -59,6 +58,12 @@ class PulseCurrent(Channel):
     @staticmethod
     def _I(V, t, current, t0, tf):
         return ((t <= tf) & (t >= t0)) * current
+
+
+class HeavysideCurrent(PulseCurrent):
+    def __init__(self, current, t0, tf):
+        super().__init__(current, t0, tf)
+        raise FutureWarning("HeavysideCurrent is deprecated, use PulseCurrent instead")
 
 
 class LeakChannel(Channel):
