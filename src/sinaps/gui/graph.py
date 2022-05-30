@@ -42,7 +42,7 @@ class SimuView:
     def __init__(self, simu):
         self.simu = simu
 
-    def field_plot(self, df, title, time=None, res=None, neuron=True, dynamic=True):
+    def field_plot(self, df, label, time=None, res=None, neuron=True, dynamic=True):
         # res : resolution : #um
         nrn = self.simu.N
         # field plot
@@ -57,7 +57,7 @@ class SimuView:
 
         p_field = rasterize(
             hv.QuadMesh(
-                (df.index.values, y, dfi(y).T), ["Time (ms)", "Position (μm)"], title
+                (df.index.values, y, dfi(y).T), ["Time (ms)", "Position (μm)"], label
             )
         )
         p_field.opts(
@@ -66,6 +66,7 @@ class SimuView:
             tools=["hover"],
             cmap="fire",
             colorbar=True,
+            clabel=label,
         )
 
         if not neuron:
@@ -185,15 +186,13 @@ class SimuView:
         )
 
     def C_field(self, ion, **kwargs):
-        return self.field_plot(
-            self.simu.C[ion], "{} Concentration (mM/L)".format(ion), **kwargs
-        ).opts(title="{} Concentration".format(ion))
+        return self.field_plot(self.simu.C[ion], "Concentration (mM/L)", **kwargs).opts(
+            title="{} Concentration".format(ion)
+        )
 
     def I_field(self, ch_cls, **kwargs):
         return self.field_plot(
-            self.simu.current(ch_cls),
-            "{} Current (pA)".format(ch_cls.__name__),
-            **kwargs
+            self.simu.current(ch_cls), "Current (pA)", **kwargs
         ).opts(title="{} Current".format(ch_cls.__name__))
 
     def __call__(self, **kwargs):
