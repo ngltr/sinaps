@@ -5,9 +5,8 @@ from functools import reduce
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
-from scipy.sparse import csr_matrix, bmat
+from scipy.sparse import csr_matrix, dia_matrix
 from scipy import interpolate
-from scipy.misc import derivative
 from numba import jit
 from tqdm import tqdm
 
@@ -54,9 +53,6 @@ class Simulation:
             np.concatenate([np.identity(self.N.nb_comp), self.N._connection_mat()])
         )
         self.G = G @ self.k_c
-        self.v_source, source_mat = self.N._all_Vsource()
-        # if len(self.v_source):
-        #    self.G = bmat([[self.G, source_mat], [source_mat.T, None]]).tocsr()
         self.V_S0 = np.zeros(max(np.concatenate((self.N.idV, self.N.idS))) + 1)
         self.N._fill_V0_array(self.V_S0)
         self.N._fill_S0_array(self.V_S0)
@@ -66,7 +62,15 @@ class Simulation:
         self.sol_diff = dict()
         self.progressbar = progressbar
 
-    def run(self, t_span, method="BDF", atol=1.49012e-8, **kwargs):
+    def run_c(
+        self,
+        t_span,
+        species=None,
+        temperature=310,
+        method="BDF",
+        atol=1.49012e-8,
+        **kwargs
+    ):
         """Run the voltage related simulation
 
         The results of the simulation are stored in attribute `V`
@@ -79,8 +83,7 @@ class Simulation:
         Other Parameters
         ----------------
         **kwargs :
-            args to pass to the ode solver. see the `scipy solve_ivp
-            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
+            args to pass to the ode solver. see the `scipy solve_ivp <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
 
         Examples
         --------
@@ -98,24 +101,52 @@ class Simulation:
         else:
             tq = None
 
-        for v in self.v_source:
-            self.V_S0[v.idV] = v.V(t_span[0])
+        if species is None:
+            species = tuple(
+                self.N.species
+            )  # conversion in tuple the ensure the order (N.species i a set)
+
+        reactions = []
+        for reac in self.N.reactions:
+            # Conversion species to int
+            members = [
+                {species.index(sp): n for sp, n in member.items()}
+                for member in reac[0:2]
+            ]
+            if reac[2]:
+                reactions.append((*members, reac[2]))
+            members.reverse()
+            if reac[3]:
+                reactions.append((*members, reac[3]))
+
+        C0 = np.zeros((self.N.nb_comp, len(species)))
+        self.N._fill_C0_array(C0, species)
+        y0 = np.hstack([self.V_S0, np.reshape(C0, -1, "F")])
+        idC = np.array(range(len(self.V_S0), len(y0)))
+        charges = (
+            np.array([CHARGE[s] for s in species]) * 96.48533132838746
+        )  # pA/aMol = C/mol/ms E-3
 
         sol = solve_ivp(
-            lambda t, y: Simulation._ode_function(
+            lambda t, y: self._ode_function(
                 y,
                 t,
                 self.idV,
                 self.idS,
+                idC,
                 self.Cm1,
                 self.G,
-                self.v_source,
                 self.channels.values(),
+                species,
+                charges,
+                reactions,
+                temperature,
+                self.N.nb_comp,
                 tq,
                 t_span,
             ),
             t_span,
-            self.V_S0,
+            y0,
             method=method,
             atol=atol,
             **kwargs
@@ -138,6 +169,15 @@ class Simulation:
         self.V_St = interpolate.interp1d(
             self.sol.t, self.sol.y, fill_value="extrapolate"
         )
+
+        tq = tqdm(total=self.t_span[1] - self.t_span[0], unit="ms")
+
+        sp, sec, pos = self.N.indexV(species)
+        df = pd.DataFrame(sol.y[idC, :].T, sol.t, [sp, sec, pos])
+        df.columns.names = ["Species", "Section", "Position (μm)"]
+        df.index.name = "Time"
+        self.C = df
+        self.sol_diff = sol
 
     def current(self, ch_cls):
         """Return current of channels of a simulations
@@ -169,8 +209,24 @@ class Simulation:
         df.index.name = "Time"
         return df
 
-    @staticmethod
-    def _ode_function(y, t, idV, idS, Cm1, G, v_source, channels, tq=None, t_span=None):
+    def _ode_function(
+        self,
+        y,
+        t,
+        idV,
+        idS,
+        idC,
+        Cm1,
+        G,
+        channels,
+        ions,
+        charges,
+        reactions,
+        T,
+        nb_comp,
+        tq=None,
+        t_span=None,
+    ):
         """this function express the ode problem :
         dy/dt = f(y)
 
@@ -187,138 +243,37 @@ class Simulation:
         dV/dt = 1/Cm (G.V + Im )
 
         """
-        vectorize = y.ndim > 1
-        if not vectorize:
-            y = y[:, np.newaxis]
+        V = y[idV]
+        y = y[:, np.newaxis]
 
-        V = y[idV, :]
-        for v in v_source:
-            V[v.idV, :] = v.V(t)
-        dV_S = np.zeros_like(y)
+        dV_S_C = np.zeros_like(y)
         for c in channels:
             c.fill_I_dS(
-                dV_S, y, t
+                dV_S_C, y, t
             )  # current of active ion channels from outisde to inside
-        if vectorize:
-            dV_S[idV, :] += np.hstack(
-                [G @ V[:, k] for k in range(y.shape[1])]
-            )  # current inter compartment
-        else:
-            dV_S[idV, :] += G @ V
-        dV_S[idV, :] *= Cm1  # dV/dt for  compartiment
-        for v in v_source:
-            dV_S[v.idV, :] = derivative(v.V, t, 1e-3)
-        # Progressbar
-        if not (tq is None):
-            n = round(t - t_span[0], 3)
-            if n > tq.n:
-                tq.update(n - tq.n)
 
-        return dV_S.squeeze()
-
-    def run_diff(
-        self, species=None, temperature=310, method="BDF", atol=1.49012e-8, **kwargs
-    ):
-        """Run the electro-diffusion simulation based on Nersnt-Planck model.
-
-        The simulation for the voltage must have been run before.
-
-        The results of the simulation are stored in attribute `C`
-
-        Parameters
-        ----------
-        species : [species]
-            Species to consider in simulation
-        temperature : float
-            Temperature in Nerst Planck equation
-
-        Other Parameters
-        ----------------
-        **kwargs :
-            args to pass to the ode solver. see the `scipy solve_ivp
-            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
-
-        """
-        tq = tqdm(total=self.t_span[1] - self.t_span[0], unit="ms")
-
-        Simulation._flux.cache_clear()
-        Simulation._difus_mat.cache_clear()
-
-        if species is None:
-            species = tuple(
-                self.N.species
-            )  # conversion in tuple the ensure the order (N.species i a set)
-
-        reactions = []
-        for reac in self.N.reactions:
-            # Conversion species to int
-            members = [
-                {species.index(sp): n for sp, n in member.items()}
-                for member in reac[0:2]
-            ]
-            if reac[2]:
-                reactions.append((*members, reac[2]))
-            members.reverse()
-            if reac[3]:
-                reactions.append((*members, reac[3]))
-
-        C0 = np.zeros((self.N.nb_comp, len(species)))
-        self.N._fill_C0_array(C0, species)
-
-        sol = solve_ivp(
-            lambda t, y: self._ode_diff_function(
-                y, t, species, reactions, temperature, tq, self.t_span
-            ),
-            self.t_span,
-            np.reshape(C0, -1, "F"),
-            method=method,
-            atol=atol,
-            # jac = lambda t, y:self.jac_diff(y,t,ions,temperature),
-            **kwargs
-        )
-        tq.close()
-
-        sp, sec, pos = self.N.indexV(species)
-        df = pd.DataFrame(sol.y.T, sol.t, [sp, sec, pos])
-        df.columns.names = ["Species", "Section", "Position (μm)"]
-        df.index.name = "Time"
-        self.C = df
-        self.sol_diff = sol
-
-    def _ode_diff_function(self, y, t, ions, reactions, T, tq=None, t_span=None):
-        """this function express the ode problem :
-        dy/dt = f(y)
-
-        y is a vector containing all state variables of the problem
-
-        C=y : concentration of each node
-        [ aM/μm^3 = m mol/L ] aM : atto(10E-18) mol correction: [ a mol/μm^3 = m mol/L = mM]
-        size n  where n is the total number of compartiment
-
-        V : Voltage array (previously computed)
-        S : Status variables of the channels (previously computed)
-        T: Temperature (Kelvin)
-
-        Concentration equation  for compartiment is given by :
-        dC/dt = 1/Vol(D V + Jc )
-        with D : Electrodiffusion matrix size n * n
-        Vol : Volume μm^3
-
-        channels: SimuChannel list contains the information about the behaviour
-         of the ion channels in order to compute J
-        """
-        C = np.reshape(y, (self.N.nb_comp, len(ions)), "F")
+        C = np.reshape(y[idC, :], (nb_comp, len(ions)), "F")
         dC = np.zeros_like(C)
 
         if len(ions) > 1:
             dC += np.vstack(
-                [self._difus_mat(T, ion, t) @ C[:, k] for k, ion in enumerate(ions)]
+                [
+                    (self.N._difus_mat(T, ion, self.k_c @ V) @ self.k_c) @ C[:, k]
+                    for k, ion in enumerate(ions)
+                ]
             ).T
         else:
             dC += self._difus_mat(T, ions[0], t) @ C
-        dC += self._flux(ions, t)  # [aM/ms]
+
+        J = np.zeros((self.N.nb_comp, len(ions)))
+        for c in self.channels.values():
+            c.fill_J(J, ions, y, t)
+        dC += J  # [aM/ms]
+        dV_S_C[idV, :] = (dC @ charges)[:, np.newaxis]  # pA
         dC *= self.Vol1  # [aM/μm^3/ms]
-        _fill_dC_reaction(dC, C, reactions)
+        # _fill_dC_reaction(dC,C,reactions)
+        dV_S_C[idC, :] = np.reshape(dC, -1, "F")[:, np.newaxis]
+        dV_S_C[idV, :] *= Cm1  # dV/dt for  compartiment #mV
 
         # Progressbar
         if not (tq is None):
@@ -326,11 +281,7 @@ class Simulation:
             if n > tq.n:
                 tq.update(n - tq.n)
 
-        return np.reshape(dC, -1, "F")
-
-    def _jac_diff(self, C, t, ions, T):
-        D = self._difus_mat(T, ions, t)  # [μm^3/ms]
-        return (D @ self.k_c).multiply(self.Vol1)  # [aM/μm^3/ms]
+        return dV_S_C.squeeze()
 
     def run_c(
         self,
@@ -524,47 +475,32 @@ class Simulation:
         return dV_S_C.squeeze()
 
     def resample(self, freq):
-
         self.V = self.V.resample(freq).mean()
 
-    # Caching functions
-    @lru_cache(128)
-    def _difus_mat(self, T, ion, t):
-        """Return the electrodiffusion matrix for :
-        - the ion *ion* type sinaps.Ion
-        - potential *V* [mV] for each compartment
-        - Temperature *T* [K]
-        - *t* : index in array V, usually the time
 
-        (we call with V and t as different argument to be cable to
-        #use the caching with lru as this method will be used a lot)
-        """
-        # We
-        return self.N._difus_mat(T, ion, self.k_c @ self.V_St(t)[self.idV]) @ self.k_c
+# %%
+if __name__ == "__main__":
+    import sinaps as sn
 
-    @lru_cache(128)
-    def _flux(self, ions, t):
-        """return the transmembrane flux of ion ion (aM/ms attoMol)
-                 towards inside
+    # %%
+    nrn = sn.Neuron([(0, 1), (1, 2), (1, 3), (3, 4)])
+    nrn[
+        0
+    ].clear_channels()  # Reset all channels, useful if you re-run this cell (does nothing the first time)
+    nrn[0].add_channel(sn.channels.PulseCurrent(500, 2, 3), 0)
+    nrn[0].add_channel(sn.channels.Hodgkin_Huxley())
+    nrn[0].add_channel(sn.channels.Hodgkin_Huxley_Ca(gCa=14.5, V_Ca=115))
+    sim = Simulation(nrn, dx=10)
+    # shortcuts
+    Ca = sn.Species.Ca
+    BF = sn.Species.Buffer
+    BFB = sn.Species.Buffer_Ca
+    nrn.add_reaction({Ca: 1, BF: 1}, {BFB: 1}, k1=0.2, k2=0.1)
+    # Calcium extrusion
+    nrn.add_reaction({Ca: 1}, {}, k1=0.05, k2=0)
+    # Calcium initial concentration
+    for s in nrn.sections:
+        s.C0[Ca] = 10 ** (-4)
+        s.C0[BF] = 2 * 10 ** (-3)
 
-        (we call with V,S and t as different argument to be cable to
-        #use the caching with lru as this method will be used a lot)
-        """
-        J = np.zeros((self.N.nb_comp, len(ions)))
-        for c in self.channels.values():
-            c.fill_J(J, ions, self.V_St(t)[:, np.newaxis], t)
-        return J
-
-
-def _fill_dC_reaction(dC, C, reactions):
-    """Return variation of concentration due to reactions aM/ms"""
-    for reaction in reactions:
-        dC_reac = (
-            reduce(np.multiply, [C[:, sp] ** n for sp, n in reaction[0].items()])
-            * reaction[2]
-        )
-        for sp, n in reaction[0].items():
-            # sp :species, n: stoechiometric coefficient
-            dC[:, sp] += -n * dC_reac
-        for sp, n in reaction[1].items():
-            dC[:, sp] += n * dC_reac
+    sim.run((0, 100))

@@ -246,12 +246,14 @@ class Hodgkin_Huxley_red(Channel):
         """
         Return the flux of ion [aM/ms/um2] of the mechanism towards inside
         """
+        V_Cl = -V_Na - V_K + V_L
+
         alpha_m = (2.5 - 0.1 * V) / (np.exp(2.5 - 0.1 * V) - 1)
         beta_m = 4 * np.exp(-V / 18)
         m = alpha_m / (alpha_m + beta_m)
         h = 0.89 - 1.1 * n
-        I_Na = gNa * m ** 3 * h * (V - V_Na)
-        I_K = gK * n ** 4 * (V - V_K)
+        I_Na = (gNa * m ** 3 * h) * (V - V_Na)
+        I_K = (gK * n ** 4) * (V - V_K)
         if ion is Species.Na:
             return -I_Na / 96.48533132838746
         elif ion is Species.K:
@@ -296,7 +298,7 @@ class Hodgkin_Huxley_Ca(Channel):
         Return the net surfacic current [pA/um2] of the mechanism towards inside
         """
         I_Ca = gCa * m ** 3 * h * (V - V_Ca)
-        return -I_Ca
+        return I_Ca
 
     @staticmethod
     def _J(ion, V, m, h, t, gCa, V_Ca):

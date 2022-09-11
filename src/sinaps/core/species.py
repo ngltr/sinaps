@@ -51,7 +51,7 @@ INITIAL_CONCENTRATION = {  # mMol/L
     Species.Na: 12,
     Species.Buffer: 2e-3,
     Species.Buffer_Ca: 0,
-    Species.Cl: 5,
+    Species.Cl: 150,
     Species.Mg: 0.5,
-    Species.Anion: 146,
+    Species.Anion: 0,
 }
