@@ -60,8 +60,6 @@ class DiffusionCoefficientError(ValueError):
 class SectionAttribute(param.Range):
     """Parameter than can be a tuple or a value"""
 
-    step = None
-
     def _validate(self, val):
         if not hasattr(val, "__len__"):
             super()._validate((val,) * 2)
