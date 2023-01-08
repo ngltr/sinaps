@@ -11,7 +11,7 @@ setuptools.setup(
     python_requires=">=3.6",
     install_requires=[
         "numpy",
-        "param==1.10.0",
+        "param>=1.10.0",
         "pandas",
         "quantiphy",
         "scipy>=1.0.0",
