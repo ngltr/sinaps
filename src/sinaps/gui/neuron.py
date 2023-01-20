@@ -104,7 +104,7 @@ class NeuronView:
 
         """
         if self._layout is None or (self._sections != self.nrn.sections) or force:
-            # print("Calculating layout...", end="")
+            print("Calculating layout...", end="")
             self._sections = self.nrn.sections.copy()
             graph = self.nrn.graph
             # Convert section to attributes for hover tool
@@ -114,6 +114,6 @@ class NeuronView:
                 sec = graph.edges[edg]["section"]
                 g_2.add_edge(edg[0], edg[1], L=sec.L)
             self._layout = layout(g_2, weight="L")
-            # print("[OK]")
+            print("[OK]")
 
         return self._layout
