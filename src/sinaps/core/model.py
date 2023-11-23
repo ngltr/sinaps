@@ -137,6 +137,35 @@ class Neuron(param.Parameterized):
             edges = self.__traversal_func__(G, self.__traversal_source__)
         return {G.edges[e]["section"]: e for e in edges}
 
+    @property
+    def branches(self):
+        G = nx.DiGraph()
+        G.add_edges_from(self.graph.edges())
+
+        roots = (v for v, d in G.in_degree() if d == 0)
+        leaves = (v for v, d in G.out_degree() if d == 0)
+        branchpoints = (v for v, d in G.out_degree() if d > 1)
+
+        # roots = list(roots)
+        leaves = list(leaves)
+        branchpoints = list(branchpoints)
+
+        branches = set(
+            tuple(s)    for bp in branchpoints
+                        for path in nx.algorithms.all_simple_paths(G, bp, leaves)
+                        for s in np.split(path, [path.index(i) for i in branchpoints if i in path][1:])
+        )
+
+        data = {}
+        for i in branches:
+            if i[0] not in data:
+                data[i[0]] = [i]
+            else:
+                data[i[0]].append(i)
+
+        # return { int(i[0]): i for i in branches }
+        return data
+
     def add_section(self, sec, i, j):
         """Connect nodes.
 

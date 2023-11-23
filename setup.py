@@ -19,6 +19,7 @@ setuptools.setup(
         "networkx",
         "datashader",
         "tqdm",
-        "numba>=0.55",
+        "numba>=0.56",
+        "pygraphviz>=1.11"
     ],
 )

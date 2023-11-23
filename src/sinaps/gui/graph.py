@@ -1,6 +1,5 @@
 import numpy as np
 from scipy import interpolate
-import hvplot.pandas
 import pandas as pd
 import holoviews as hv
 from holoviews.operation.datashader import rasterize
