@@ -1,5 +1,5 @@
 """Provides tools for working with objects."""
-import re
+import re, sys
 
 
 from sinaps.core.model import Section
@@ -144,13 +144,13 @@ class SectionListSimu:
 
     @property
     def V(self):
-        return self.simu.V[self.name]
+        return self.simu.V# [self.name]
 
     def C(self, ion):
-        return self.simu.C[ion][self.name]
+        return self.simu.C[ion]
 
     def I(self, ch_cls):
-        return self.simu.current(ch_cls)[self.name]
+        return self.simu.current(ch_cls)
 
 
 class Simulation(_Simulation):

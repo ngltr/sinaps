@@ -8,18 +8,18 @@ setuptools.setup(
     description="Neuronal simulation package",
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
-    python_requires=">=3.6",
+    python_requires=">=3.11",
     install_requires=[
         "numpy",
-        "param>=1.10.0",
+        "param",
         "pandas",
         "quantiphy",
-        "scipy>=1.0.0",
+        "scipy",
         "hvplot",
         "networkx",
         "datashader",
         "tqdm",
-        "numba>=0.56",
-        "pygraphviz>=1.11"
+        "numba",
+        # "pygraphviz>=1.11"
     ],
 )

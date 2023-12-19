@@ -60,6 +60,35 @@ class DiffusionCoefficientError(ValueError):
 class SectionAttribute(param.Range):
     """Parameter than can be a tuple or a value"""
 
+
+    def __init__(
+        self,
+        default=None,
+        bounds=None, 
+        inclusive_bounds=(True,True), 
+        doc=None
+    ):
+        if not hasattr(default, "__len__"):
+            super(SectionAttribute, self).__init__(
+                (default,) * default, 
+                bounds=bounds, 
+                inclusive_bounds=inclusive_bounds, 
+                doc=doc
+            )
+        else:
+            super(SectionAttribute, self).__init__(
+                default, 
+                bounds=bounds, 
+                inclusive_bounds=inclusive_bounds, 
+                doc=doc
+            )
+        # self.__init__(
+        #     default, 
+        #     bounds=bounds, 
+        #     inclusive_bounds=inclusive_bounds, 
+        #     doc=doc
+        # )
+
     def _validate(self, val):
         if not hasattr(val, "__len__"):
             super()._validate((val,) * 2)
@@ -617,16 +646,16 @@ class Section(param.Parameterized):
     L = param.Number(
         100, bounds=(0, None), inclusive_bounds=(False, True), doc="length [μm]"
     )
-    a = SectionAttribute(
+    a = param.Number(
         1, bounds=(0, None), inclusive_bounds=(False, True), doc="radius [μm]"
     )
-    C_m = SectionAttribute(
+    C_m = param.Number(
         1,
         bounds=(0, None),
         inclusive_bounds=(False, True),
         doc="menbrane capacitance [μF/cm²]",
     )
-    R_l = SectionAttribute(
+    R_l = param.Number(
         150,
         bounds=(0, None),
         inclusive_bounds=(False, True),

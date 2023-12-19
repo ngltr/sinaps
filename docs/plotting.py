@@ -55,10 +55,6 @@ sim.run_diff(max_step=1)
 # In[ ]:
 
 
-import hvplot
-hvplot.__version__
-
-
 # To plot the neuron geometry:
 
 # In[ ]:
@@ -96,7 +92,7 @@ sim.V
 # In[ ]:
 
 
-sim.V.loc[:,'Section0000'][25].hvplot()
+sim.V.loc[:,'Section0000'][25].plot()
 
 
 # is equivalent to:
@@ -104,7 +100,7 @@ sim.V.loc[:,'Section0000'][25].hvplot()
 # In[ ]:
 
 
-sim['Section0000'].V.loc[:,25].hvplot()
+sim['Section0000'].V.loc[:,25].plot()
 
 
 # The name of the sections can be accessed through the columns function. See the [pandas](https://pandas.pydata.org/) doc for more features.
@@ -172,7 +168,7 @@ sim.current(sn.channels.Hodgkin_Huxley)
 # In[ ]:
 
 
-sim.current(sn.channels.PulseCurrent)['Section0000'].hvplot()
+sim.current(sn.channels.PulseCurrent)['Section0000'].plot()
 
 
 # ## Plotting the species dynamics
@@ -204,7 +200,7 @@ sim.C[sn.Species.Ca]
 # In[ ]:
 
 
-sim.C[sn.Species.Ca].loc[:,'Section0000'][25].hvplot()
+sim.C[sn.Species.Ca].loc[:,'Section0000'][25].plot()
 
 
 # is equivalent to:
@@ -212,11 +208,11 @@ sim.C[sn.Species.Ca].loc[:,'Section0000'][25].hvplot()
 # In[ ]:
 
 
-sim['Section0000'].C(sn.Species.Ca).loc[:,25].hvplot()
+sim['Section0000'].C(sn.Species.Ca).loc[:,25].plot()
 
 
 # In[ ]:
 
 
-sim['Section0000'].C(sn.Species.Buffer_Ca).loc[:,5].hvplot()
+sim['Section0000'].C(sn.Species.Buffer_Ca).loc[:,5].plot()
 
