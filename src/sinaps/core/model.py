@@ -158,6 +158,12 @@ class Neuron(param.Parameterized):
         return self._graph
 
     @property
+    def digraph(self):
+        G = nx.DiGraph()
+        G.add_edges_from(self._graph.edges())
+        return G
+
+    @property
     def sections(self):
         G = self.graph
         if self.__traversal_func__ is None:
@@ -166,34 +172,34 @@ class Neuron(param.Parameterized):
             edges = self.__traversal_func__(G, self.__traversal_source__)
         return {G.edges[e]["section"]: e for e in edges}
 
-    @property
-    def branches(self):
-        G = nx.DiGraph()
-        G.add_edges_from(self.graph.edges())
-
-        roots = (v for v, d in G.in_degree() if d == 0)
-        leaves = (v for v, d in G.out_degree() if d == 0)
-        branchpoints = (v for v, d in G.out_degree() if d > 1)
-
-        # roots = list(roots)
-        leaves = list(leaves)
-        branchpoints = list(branchpoints)
-
-        branches = set(
-            tuple(s)    for bp in branchpoints
-                        for path in nx.algorithms.all_simple_paths(G, bp, leaves)
-                        for s in np.split(path, [path.index(i) for i in branchpoints if i in path][1:])
-        )
-
-        data = {}
-        for i in branches:
-            if i[0] not in data:
-                data[i[0]] = [i]
-            else:
-                data[i[0]].append(i)
-
-        # return { int(i[0]): i for i in branches }
-        return data
+#     @property
+#     def branches(self):
+#         G = nx.DiGraph()
+#         G.add_edges_from(self.graph.edges())
+# 
+#         roots = (v for v, d in G.in_degree() if d == 0)
+#         leaves = (v for v, d in G.out_degree() if d == 0)
+#         branchpoints = (v for v, d in G.out_degree() if d > 1)
+# 
+#         # roots = list(roots)
+#         leaves = list(leaves)
+#         branchpoints = list(branchpoints)
+# 
+#         branches = set(
+#             tuple(s)    for bp in branchpoints
+#                         for path in nx.algorithms.all_simple_paths(G, bp, leaves)
+#                         for s in np.split(path, [path.index(i) for i in branchpoints if i in path][1:])
+#         )
+# 
+#         data = {}
+#         for i in branches:
+#             if i[0] not in data:
+#                 data[i[0]] = [i]
+#             else:
+#                 data[i[0]].append(i)
+# 
+#         # return { int(i[0]): i for i in branches }
+#         return data
 
     def add_section(self, sec, i, j):
         """Connect nodes.
@@ -455,7 +461,10 @@ class Neuron(param.Parameterized):
             g_end = 1 / s._r_l_end()
             # conductance of leak channels
             k[[i, j], s.idV[[0, -1]]] = g_end
-        k = k / k.sum(axis=1, keepdims=True)
+        ksum = k.sum(axis=1, keepdims=True)
+        # k = k / k.sum(axis=1, keepdims=True)
+        if np.any(ksum == 0): k *= 0
+        else: k /= ksum
         return k
 
     def _fill_V0_array(self, V0):
@@ -701,7 +710,7 @@ class Section(param.Parameterized):
         return self._C_m * 2 * PI * self.a
 
     def __str__(self):
-        return "Section {}".format(self.name)
+        return "{}".format(self.name)
 
     def _repr_markdown_(self):
         return """Section **{}**
@@ -1010,6 +1019,20 @@ class _SimuChannel:
         """
         V = V_S[self.idV, :]
         S = [V_S[self.idS[k], :] for k in range(self.nb_var)]
+        #print('params k: type(v)')
+        #print({ k: type(v) for k, v in self.params.items() })
+        #print('V')
+        #print(V)
+        #print('S')
+        #print(*S)
+        #print('t')
+        #print(t)
+        #print('params k: len(v)')
+        #print({ k: v.shape for k, v in self.params.items() })
+        #print('self.I')
+        #print(self.I(V, *S, t, **self.params))
+        #import sys
+        #sys.exit()
         np.add.at(y, np.s_[self.idV, :], self.I(V, *S, t, **self.params) * self.k)
         if self.nb_var:
             dS = self.dS(V, *S, t, **self.params)

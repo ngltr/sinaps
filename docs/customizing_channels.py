@@ -42,7 +42,7 @@ voltage-dependent flow of sodium (Na+) and small amounts of calcium (Ca2+) ions 
     """
     param_names = ('t0','gnmda','tnmda1','tnmda2','V_nmda')
 
-    def __init__(self,t0,gnmda=0.02,tnmda1=11.5,tnmda2=0.67,V_nmda=75):
+    def __init__(self, t0, gnmda=0.02,tnmda1=11.5,tnmda2=0.67,V_nmda=75):
         """Point channel with a NMDAr-type current starting at time t0 [pA]
             t0: start of the current [ms]
             gnmda: max conductance of NMDAr [nS]
