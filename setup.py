@@ -8,7 +8,7 @@ setuptools.setup(
     description="Neuronal simulation package",
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
-    python_requires=">=3.11",
+    python_requires=">=3.10",
     install_requires=[
         "numpy",
         "param",
