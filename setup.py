@@ -20,6 +20,6 @@ setuptools.setup(
         "datashader",
         "tqdm",
         "numba",
-        # "pygraphviz>=1.11"
+        "pygraphviz" # for macOS use brew install graphviz and build package using proper headers
     ],
 )

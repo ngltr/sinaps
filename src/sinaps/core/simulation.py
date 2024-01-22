@@ -245,7 +245,7 @@ class Simulation:
         if species is None:
             species = tuple(
                 self.N.species
-            )  # conversion in tuple the ensure the order (N.species i a set)
+            )  # conversion in tuple the ensure the order (N.species is a set)
 
         reactions = []
         for reac in self.N.reactions:
