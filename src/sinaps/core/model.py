@@ -25,6 +25,7 @@ from scipy.sparse import dia_matrix, csr_matrix
 from scipy import interpolate
 import param
 import networkx as nx
+import sys
 
 import sinaps.core.species as species
 
@@ -60,7 +61,34 @@ class DiffusionCoefficientError(ValueError):
 class SectionAttribute(param.Range):
     """Parameter than can be a tuple or a value"""
 
-    step = None
+
+    def __init__(
+        self,
+        default=None,
+        bounds=None, 
+        inclusive_bounds=(True,True), 
+        doc=None
+    ):
+        if not hasattr(default, "__len__"):
+            super(SectionAttribute, self).__init__(
+                (default,) * default, 
+                bounds=bounds, 
+                inclusive_bounds=inclusive_bounds, 
+                doc=doc
+            )
+        else:
+            super(SectionAttribute, self).__init__(
+                default, 
+                bounds=bounds, 
+                inclusive_bounds=inclusive_bounds, 
+                doc=doc
+            )
+        # self.__init__(
+        #     default, 
+        #     bounds=bounds, 
+        #     inclusive_bounds=inclusive_bounds, 
+        #     doc=doc
+        # )
 
     def _validate(self, val):
         if not hasattr(val, "__len__"):
@@ -111,7 +139,7 @@ class Neuron(param.Parameterized):
     def __init__(self, sections=None, **kwargs):
 
         super().__init__(**kwargs)
-        self._species = set()
+        self._species = list()
         self.dx = None
         self._mat = None
         self._x = None
@@ -129,6 +157,12 @@ class Neuron(param.Parameterized):
     @property
     def graph(self):
         return self._graph
+
+    @property
+    def digraph(self):
+        G = nx.DiGraph()
+        G.add_edges_from(self._graph.edges())
+        return G
 
     @property
     def sections(self):
@@ -205,7 +239,8 @@ class Neuron(param.Parameterized):
                 D = {species: D}
             species = {species}
 
-        self._species = self._species.union(species)
+        tmp = self._species + species
+        self._species = sorted(set(tmp), key=tmp.index)
         for sp in species:
             for sec in self.sections:
                 if not (sp in sec.C0):
@@ -257,7 +292,7 @@ class Neuron(param.Parameterized):
         self.dx = dx
         for s in self.sections:
             self.nb_comp += s._gen_comp(dx, force)
-
+        
         idV0 = 0
         idS0 = self.nb_comp
         for s in self.sections:
@@ -389,6 +424,7 @@ class Neuron(param.Parameterized):
         V0 = sum (gk.Vk) / sum(gk)
 
         """
+
         if self.dx is None:
             raise SpatialError
 
@@ -399,7 +435,9 @@ class Neuron(param.Parameterized):
             g_end = 1 / s._r_l_end()
             # conductance of leak channels
             k[[i, j], s.idV[[0, -1]]] = g_end
-        k = k / k.sum(axis=1, keepdims=True)
+        ksum = k.sum(axis=1, keepdims=True)
+        if np.any(ksum == 0): k *= 0
+        else: k /= ksum
         return k
 
     def _fill_V0_array(self, V0):
@@ -590,16 +628,16 @@ class Section(param.Parameterized):
     L = param.Number(
         100, bounds=(0, None), inclusive_bounds=(False, True), doc="length [μm]"
     )
-    a = SectionAttribute(
+    a = param.Number(
         1, bounds=(0, None), inclusive_bounds=(False, True), doc="radius [μm]"
     )
-    C_m = SectionAttribute(
+    C_m = param.Number(
         1,
         bounds=(0, None),
         inclusive_bounds=(False, True),
         doc="menbrane capacitance [μF/cm²]",
     )
-    R_l = SectionAttribute(
+    R_l = param.Number(
         150,
         bounds=(0, None),
         inclusive_bounds=(False, True),
@@ -645,7 +683,7 @@ class Section(param.Parameterized):
         return self._C_m * 2 * PI * self.a
 
     def __str__(self):
-        return "Section {}".format(self.name)
+        return "{}".format(self.name)
 
     def _repr_markdown_(self):
         return """Section **{}**

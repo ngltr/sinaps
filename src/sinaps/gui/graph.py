@@ -1,6 +1,5 @@
 import numpy as np
 from scipy import interpolate
-import hvplot.pandas
 import pandas as pd
 import holoviews as hv
 from holoviews.operation.datashader import rasterize
@@ -33,7 +32,7 @@ class Plotter:
             df.columns = df.columns.map(("{}".format(self.obj.name) + " - {}µm").format)
         df.index.name = "time (ms)"
         step = max(int(sum([s.nb_comp for s in self.obj]) / max_plot), 1)
-        plot = df.loc[::, ::step].hvplot(responsive=True, height=400, ylabel=label)
+        plot = df.loc[::, ::step].plot(responsive=True, height=400, ylabel=label)
 
         return plot
 

@@ -177,6 +177,56 @@ class Hodgkin_Huxley(Channel):
         """
         return 0.317, 0.0526, 0.5734
 
+    @staticmethod
+    def _dI(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+        # dI/dV
+        dI_Na = gNa * m**3 * h
+        dI_K = gK * n**4
+        dI_L = gL
+        yield - (dI_Na + dI_K + dI_L)
+        # dI/dn
+        dI_Na = np.zeros_like(V)
+        dI_K = 4 * gK * n**3 * (V - V_K)
+        dI_L = np.zeros_like(V)
+        yield - (dI_Na + dI_K + dI_L)
+        # dI/dm
+        dI_Na = 3 * gNa * m**2 * h * (V - V_Na)
+        dI_K = np.zeros_like(V)
+        dI_L = np.zeros_like(V)
+        yield - (dI_Na + dI_K + dI_L)
+        # dI/dh
+        dI_Na = gNa * m**3 * (V - V_Na)
+        dI_K = np.zeros_like(V)
+        dI_L = np.zeros_like(V)
+        yield - (dI_Na + dI_K + dI_L)
+
+    @staticmethod
+    def _ddS(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+        # d(n')/dV
+        yield (0.01 * (1 - n) * np.exp(1 - 0.1 * V) * (1 - 0.1 * V))/(np.exp(1 - 0.1 * V) - 1)**2 - (0.01 * (1 - n))/(np.exp(1 - 0.1 * V) - 1) + 0.0015625 * n * np.exp(-V/80)
+        # d(n')/dn
+        yield (0.01 * V - 0.1) / (np.exp(1 - 0.1 * V) - 1) - 0.125 * np.exp(-V / 80)
+        # d(n')/dm
+        yield np.zeros_like(n)
+        # d(n')/dh
+        yield np.zeros_like(n)
+        # d(m')/dV
+        yield (-0.1 * (1 - m))/(-1 + np.exp(2.5 - 0.1 * V)) + (2 * m)/(9 * np.exp(V/18)) + (0.1 * np.exp(2.5 - 0.1 * V) * (1 - m) * (2.5 - 0.1 * V))/(-1 + np.exp(2.5 - 0.1 * V))**2
+        # d(m')/dn
+        yield np.zeros_like(m)
+        # d(m')/dm
+        yield -4/np.exp(V/18) + (2.5 - 0.1 * V)/(1 - 12.1825/np.exp(0.1 * V))
+        # d(m')/dh
+        yield np.zeros_like(m)
+        # d(h')/dV
+        yield (-0.0035 + 0.0035 * h)/np.exp(V/20) - (2.00855 * np.exp(0.1 * V) * h)/(np.exp(3) + np.exp(0.1 * V))**2
+        # d(h')/dn
+        yield np.zeros_like(h)
+        # d(h')/dm
+        yield np.zeros_like(h)
+        # d(h')/dh
+        yield -0.07/np.exp(V/20) - 1/(1 + np.exp(3 - 0.1 * V))
+
 
 class Hodgkin_Huxley_red(Channel):
     """Hodgkin Huxley channel reduced version.
@@ -259,6 +309,34 @@ class Hodgkin_Huxley_red(Channel):
         """
         return 0.3162
 
+    @staticmethod
+    def _dI(V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
+        # dI/dV
+        alpha_m = (2.5 - 0.1 * V) / (np.exp(2.5 - 0.1 * V) - 1)
+        dalpha_m = (0.1 * np.exp(0.2 * V) + np.exp(0.1 * V) * (1.82737 - 0.121825 * V)) / (-12.1825 + np.exp(0.1 * V))**2
+        beta_m = 4 * np.exp(-V / 18)
+        dbeta_m = - (2 / 9) * np.exp(-V / 18)
+        m = alpha_m / (alpha_m + beta_m)
+        dm = (beta_m * dalpha_m - alpha_m * dbeta_m) / (alpha_m + beta_m)**2
+        h = 0.89 - 1.1 * n
+        dI_Na = gNa * m**2 * h * (3 * (V - V_Na) * dm + m)
+        dI_K = gK * n**4
+        dI_L = gL
+        yield - (dI_Na + dI_K + dI_L)
+        # dI/dn
+        dh = -1.1
+        dI_Na = gNa * (V - V_Na) * m**3 * dh
+        dI_K = 4 * gK * n**3 * (V - V_K)
+        dI_L = np.zeros_like(V)
+        yield - (dI_Na + dI_K + dI_L)
+
+    @staticmethod
+    def _ddS(V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
+        # d(n')/dV
+        yield (-0.01 * (1 - n))/(-1 + np.exp(1 - 0.1 * V)) + (0.0015625 * n)/np.exp(V/80) + (0.01 * np.exp(1 - 0.1 * V) * (1 - n) * (1 - 0.1 * V))/(-1 + np.exp(1 - 0.1 * V))**2
+        # d(n')/dn
+        yield (0.01 * V - 0.1) / (np.exp(1 - 0.1 * V) - 1) - 0.125 * np.exp(-V / 80)
+
 
 class Hodgkin_Huxley_Ca(Channel):
     """Ca channel to add to Hodgkin Huxley
@@ -312,6 +390,30 @@ class Hodgkin_Huxley_Ca(Channel):
         h = 1
         """
         return 0, 1
+
+    @staticmethod
+    def _dI(V, m, h, t, gCa, V_Ca):
+        # dI/dV
+        yield -(gCa * m**3 * h)
+        # dI/dm
+        yield -(3 * gCa * h * m**2 * (V - V_Ca))
+        # dI/dh
+        yield -(gCa * m**3 * (V - V_Ca))
+        
+    @staticmethod
+    def _ddS(V, m, h, t, gCa, V_Ca):
+        # d(m')/dV
+        yield (0.769231 * np.exp(102 - V)) / (1 + np.exp(102 - V))**2
+        # d(m')/dm
+        yield -0.769231 * np.ones_like(m)
+        # d(m')/dh
+        yield np.zeros_like(m)
+        # d(h')/dV
+        yield np.exp(24 - V) / (10 * (1 + np.exp(24 - V))**2)
+        # d(h')/dm
+        yield np.zeros_like(h)
+        # d(h')/dh
+        yield -0.1 * np.ones_like(h)
 
 
 class AMPAR(Channel):
@@ -372,6 +474,11 @@ class AMPAR(Channel):
         else:
             return 0 * V
 
+    @staticmethod
+    def _dI(V, t, t0, gampa, tampa1, tampa2, V_ampa):
+        # dI/dV
+        yield ((t <= t0 + 20) & (t >= t0)) * gampa * (1 - np.exp(-np.abs(t - t0)/tampa1)) * (-np.exp(-np.abs(t - t0)/tampa2))
+
 
 class NMDAR(Channel):
     """Point channel with a NMDAr-type current starting at time t0.
@@ -409,8 +516,8 @@ class NMDAR(Channel):
     @staticmethod
     def _I(V, t, t0, gnmda, tnmda1, tnmda2, V_nmda):
         return (
-            -((t <= t0 + 50) & (t >= t0))
-            * gnmda
+            ((t <= t0 + 50) & (t >= t0))
+            * -gnmda
             * (np.exp(-np.abs(t - t0) / tnmda1) - np.exp(-np.abs(t - t0) / tnmda2))
             / (1 + 0.33 * 2 * np.exp(-0.06 * (V - 65)))
             * (V - V_nmda)
@@ -434,6 +541,11 @@ class NMDAR(Channel):
             )
         else:
             return 0 * V
+
+    @staticmethod
+    def _dI(V, t, t0, gnmda, tnmda1, tnmda2, V_nmda):
+        # dI/dV
+        yield ((t <= t0 + 50) & (t >= t0)) * (gnmda * (-1.95634 * V_nmda + np.exp(0.06 * V) + 1.95634 * V + 32.6056) * (np.exp(np.abs(t - t0)/tnmda1) - np.exp(np.abs(t - t0)/tnmda2)) * np.exp(0.06 * V - ((tnmda1 + tnmda2) * np.abs(t - t0))/(tnmda1 * tnmda2)))/(32.6056 + np.exp(0.06 * V))**2
 
 
 def custom(func, name="Custom channel"):

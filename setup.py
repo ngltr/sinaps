@@ -8,17 +8,18 @@ setuptools.setup(
     description="Neuronal simulation package",
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
-    python_requires=">=3.6",
+    python_requires=">=3.10",
     install_requires=[
         "numpy",
-        "param==1.10.0",
+        "param",
         "pandas",
         "quantiphy",
-        "scipy>=1.0.0",
+        "scipy",
         "hvplot",
         "networkx",
         "datashader",
         "tqdm",
-        "numba>=0.55",
+        "numba",
+        #"pygraphviz" # for macOS use brew install graphviz and build package using proper headers
     ],
 )

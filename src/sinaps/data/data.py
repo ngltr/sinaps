@@ -1,6 +1,7 @@
 """Provides tools for working with objects."""
-import re
-
+import re, sys
+import numpy as np
+import networkx as nx
 
 from sinaps.core.model import Section
 from sinaps.core.model import Neuron as _Neuron
@@ -103,9 +104,20 @@ class Neuron(_Neuron):
         for nd in self.nodes:
             self.graph.add_nodes_from(nodes, **kwargs)
 
+
+    def remove_node_data(self, nodes=None, **kwargs):
+        """Remove data to graph nodes
+
+        This is useful for plotting
+        """
+        if nodes is None:
+            nodes = self.nodes
+        for nd in self.nodes:
+            self.graph.remove_nodes_from(nodes, **kwargs)
+
     def __getitem__(self, key):
         def get(key):
-            if issubclass(type(key), int):
+            if issubclass(type(key), int) or issubclass(type(key), np.int64):
                 return [e["section"] for e in self.graph[key].values()]
             elif issubclass(type(key), slice):
                 return list(self.sections)[key]
@@ -125,8 +137,21 @@ class Neuron(_Neuron):
 
     def leaves(self):
         """Return leaves section"""
-        G = self.graph
-        return [n for n in G.nodes if G.degree(n) == 1]
+        return np.array([n for n, d in self.digraph.out_degree() if d == 0])
+
+    def roots(self):
+        """Return roots section"""
+        return np.array([n for n, d in self.digraph.in_degree() if d == 0])
+
+    def branchpoints(self):
+        """Return branchpoints section"""
+        return np.array([n for n, d in self.digraph.out_degree() if d > 1])
+
+    def branches(self):
+        """Return branches section"""
+        out_degree = self.digraph.out_degree
+        in_degree = self.digraph.in_degree
+        return np.array([n for n in self.nodes() if out_degree(n) == 1 and in_degree(n) == 1])
 
     def __repr__(self):
         return "Neuron(name='{obj.name}', {nsec} sections)".format(
@@ -144,13 +169,13 @@ class SectionListSimu:
 
     @property
     def V(self):
-        return self.simu.V[self.name]
+        return self.simu.V# [self.name]
 
     def C(self, ion):
-        return self.simu.C[ion][self.name]
+        return self.simu.C[ion]
 
     def I(self, ch_cls):
-        return self.simu.current(ch_cls)[self.name]
+        return self.simu.current(ch_cls)
 
 
 class Simulation(_Simulation):

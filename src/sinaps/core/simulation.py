@@ -4,12 +4,29 @@ from functools import reduce
 
 import numpy as np
 import pandas as pd
+import scipy as sp
 from scipy.integrate import solve_ivp
 from scipy.sparse import csr_matrix, bmat
 from scipy import interpolate
 from scipy.misc import derivative
-from numba import jit
+# from numba import jit
 from tqdm import tqdm
+
+##### MYFUNC
+import sys
+from functools import wraps
+import time
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time.perf_counter()
+        result = f(*args, **kw)
+        te = time.perf_counter()
+        print(f'func:{f.__name__} took: {te-ts:2.8f} sec')
+        return result
+    return wrap
+#####
 
 
 class Simulation:
@@ -46,8 +63,7 @@ class Simulation:
         self.idV, self.idS = self.N._init_sim(dx, force_dx)
         self.Cm1 = 1 / self.N._capacitance_array()[:, np.newaxis]
         self.Vol1 = 1 / self.N._volume_array()[:, np.newaxis]
-        G = csr_matrix(self.N._conductance_mat())  # sparse matrix format for
-        # efficiency
+        G = csr_matrix(self.N._conductance_mat())  # sparse matrix format for efficiency
         self.k_c = csr_matrix(
             np.concatenate([np.identity(self.N.nb_comp), self.N._connection_mat()])
         )
@@ -64,6 +80,22 @@ class Simulation:
         self.sol_diff = dict()
         self.progressbar = progressbar
 
+        self.temperature = 310
+        self.species = tuple(self.N.species)
+        self.reactions = []
+        for reac in self.N.reactions:
+            # Conversion species to int
+            members = [
+                {self.species.index(sp): n for sp, n in member.items()}
+                for member in reac[0:2]
+            ]
+            if reac[2]:
+                self.reactions.append((*members, reac[2]))
+            members.reverse()
+            if reac[3]:
+                self.reactions.append((*members, reac[3]))
+
+    @timing
     def run(self, t_span, method="BDF", atol=1.49012e-8, **kwargs):
         """Run the voltage related simulation
 
@@ -167,7 +199,8 @@ class Simulation:
         df.index.name = "Time"
         return df
 
-    @staticmethod
+    # @timing
+    @staticmethod 
     def _ode_function(y, t, idV, idS, Cm1, G, v_source, channels, tq=None, t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
@@ -185,6 +218,7 @@ class Simulation:
         dV/dt = 1/Cm (G.V + Im )
 
         """
+
         vectorize = y.ndim > 1
         if not vectorize:
             y = y[:, np.newaxis]
@@ -214,6 +248,98 @@ class Simulation:
 
         return dV_S.squeeze()
 
+    def jacobian(self, t, y) -> np.ndarray:
+        vectorize = y.ndim > 1
+        if not vectorize:
+            y = y[:, np.newaxis]
+            
+        n = len(self.idV) + len(self.idS)
+        J = np.zeros((n, n))
+
+        for c, s in self.channels.items():
+            V = y[s.idV, :]
+            S = [y[s.idS[i], :] for i in range(c.nb_var)]
+
+            if not hasattr(c, 'position'): 
+                idX = [s.idV, *s.idS]
+                n = c.nb_var + 1
+
+                if hasattr(c, '_dI'):
+                    dI = c._dI(V, *S, t, **s.params)
+                    for i in range(n):
+                        J[s.idV, idX[i]] += np.squeeze(next(dI) * s.k)
+
+                if hasattr(c, '_ddS'):
+                    ddS = c._ddS(V, *S, t, **s.params)
+                    for i in range(1, n):
+                        for j in range(n):
+                            J[idX[i], idX[j]] += np.squeeze(next(ddS))  
+
+        
+        m = self.idV[-1]+1
+        J[:m, :m] += self.G
+        J[:m, :] *= self.Cm1
+
+        return J
+
+    def validate_jacobian(self, t_span, rtol=1e-3, atol=1e-6, equal_nan=False) -> bool:
+        y = self.V_S0
+
+        fun = lambda t, y: Simulation._ode_function(
+            y,
+            t,
+            self.idV,
+            self.idS,
+            self.Cm1,
+            self.G,
+            self.v_source,
+            self.channels.values(),
+            None,
+            t_span,
+        )
+
+        def fun_vectorized(t, y):
+            f = np.empty_like(y)
+            for i, yi in enumerate(y.T):
+                f[:, i] = fun(t, yi)
+            return f
+
+        f = fun(t_span[0], y)
+
+        nJ, _ = sp.integrate._ivp.common.num_jac(fun_vectorized, t_span[0], y, f, atol, None, None)
+        aJ = self.jacobian(t_span[0], y)
+
+        allclose = np.allclose(
+            aJ, 
+            nJ, 
+            rtol=rtol, 
+            atol=atol, 
+            equal_nan=equal_nan
+        )
+
+        isclose = np.isclose(
+            aJ, 
+            nJ, 
+            rtol=rtol, 
+            atol=atol, 
+            equal_nan=equal_nan
+        )
+
+        idxs = np.where(
+            np.logical_not(
+                isclose
+            )
+        )
+
+        keys = ['x', 'y', 'ana', 'num']
+
+        return (
+            allclose, isclose,
+            aJ, nJ,
+            list(dict(zip(keys, d)) for d in zip(*idxs, aJ[idxs], nJ[idxs]))
+        )
+
+    @timing
     def run_diff(
         self, species=None, temperature=310, method="BDF", atol=1.49012e-8, **kwargs
     ):
@@ -237,35 +363,42 @@ class Simulation:
             <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
 
         """
-        tq = tqdm(total=self.t_span[1] - self.t_span[0], unit="ms")
+        if self.progressbar is not None:
+            tq = self.progressbar(total=self.t_span[1] - self.t_span[0], unit="ms")
+        else:
+            tq = None
 
         Simulation._flux.cache_clear()
         Simulation._difus_mat.cache_clear()
 
-        if species is None:
-            species = tuple(
-                self.N.species
-            )  # conversion in tuple the ensure the order (N.species i a set)
+        self.temperature = temperature
 
-        reactions = []
+        if species is None:
+            self.species = tuple(
+                self.N.species
+            )  # conversion in tuple the ensure the order (N.species is a set)
+        else:
+            self.species = species
+
+        self.reactions = []
         for reac in self.N.reactions:
             # Conversion species to int
             members = [
-                {species.index(sp): n for sp, n in member.items()}
+                {self.species.index(sp): n for sp, n in member.items()}
                 for member in reac[0:2]
             ]
             if reac[2]:
-                reactions.append((*members, reac[2]))
+                self.reactions.append((*members, reac[2]))
             members.reverse()
             if reac[3]:
-                reactions.append((*members, reac[3]))
+                self.reactions.append((*members, reac[3]))
 
-        C0 = np.zeros((self.N.nb_comp, len(species)))
-        self.N._fill_C0_array(C0, species)
+        C0 = np.zeros((self.N.nb_comp, len(self.species)))
+        self.N._fill_C0_array(C0, self.species)
 
         sol = solve_ivp(
             lambda t, y: self._ode_diff_function(
-                y, t, species, reactions, temperature, tq, self.t_span
+                y, t, self.species, self.reactions, self.temperature, tq, self.t_span
             ),
             self.t_span,
             np.reshape(C0, -1, "F"),
@@ -274,15 +407,17 @@ class Simulation:
             # jac = lambda t, y:self.jac_diff(y,t,ions,temperature),
             **kwargs
         )
-        tq.close()
+        if tq is not None:
+            tq.close()
 
-        sp, sec, pos = self.N.indexV(species)
+        sp, sec, pos = self.N.indexV(self.species)
         df = pd.DataFrame(sol.y.T, sol.t, [sp, sec, pos])
         df.columns.names = ["Species", "Section", "Position (μm)"]
         df.index.name = "Time"
         self.C = df
         self.sol_diff = sol
 
+    # @timing
     def _ode_diff_function(self, y, t, ions, reactions, T, tq=None, t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
@@ -317,7 +452,7 @@ class Simulation:
         dC += self._flux(ions, t)  # [aM/ms]
         dC *= self.Vol1  # [aM/μm^3/ms]
         _fill_dC_reaction(dC, C, reactions)
-
+        
         # Progressbar
         if not (tq is None):
             n = round(t - t_span[0], 3)
@@ -326,12 +461,101 @@ class Simulation:
 
         return np.reshape(dC, -1, "F")
 
+    def diff_jacobian(self, t, y) -> np.ndarray:
+        m = self.N.nb_comp
+        n = len(self.species)
+        
+        vectorize = y.ndim > 1
+        if not vectorize:
+            y = y[:, np.newaxis]
+
+        C = np.reshape(y, (m, n), "F")
+        J = np.zeros((m * n, m * n))
+
+        for i, sp in enumerate(self.species):
+            i *= m
+            j = i + m
+            J[i:j, i:j] = self._difus_mat(self.temperature, sp, t).todense()
+            J[i:j, i:j] *= self.Vol1
+
+        for reaction in self.reactions:
+            coef = reaction[2]
+            for i, _ in enumerate(self.species):
+                dC0 = [C[:, sp]**n if sp != i else n*C[:, sp]**(n-1) for sp, n in reaction[0].items()]
+                dC_reac = coef * np.multiply.reduce(dC0)
+                i *= m
+                j = i+m
+                for sp, n in reaction[0].items():
+                    k = sp * m
+                    l = k+m
+                    J[k:l, i:j] += np.diag(-n * dC_reac)
+                for sp, n in reaction[1].items():
+                    k = sp * m
+                    l = k+m
+                    J[k:l, i:j] += np.diag(n * dC_reac)
+
+        return J
+
+    def validate_diff_jacobian(self, t_span, rtol=1e-3, atol=1e-6, equal_nan=False) -> bool:
+        C0 = np.zeros((self.N.nb_comp, len(self.species)))
+        self.N._fill_C0_array(C0, self.species)
+
+        y = np.reshape(C0, -1, "F")
+
+        fun = lambda t, y: self._ode_diff_function(
+            y,
+            t,
+            self.species,
+            self.reactions,
+            self.temperature,
+            None,
+            t_span,
+        )
+
+        def fun_vectorized(t, y):
+            f = np.empty_like(y)
+            for i, yi in enumerate(y.T):
+                f[:, i] = fun(t, yi)
+            return f
+
+        f = fun(t_span[0], y)
+
+        nJ, _ = sp.integrate._ivp.common.num_jac(fun_vectorized, t_span[0], y, f, atol, None, None)
+        aJ = self.diff_jacobian(t_span[0], y)
+
+        allclose = np.allclose(
+            aJ, 
+            nJ, 
+            rtol=rtol, 
+            atol=atol, 
+            equal_nan=equal_nan
+        )
+
+        isclose = np.isclose(
+            aJ, 
+            nJ, 
+            rtol=rtol, 
+            atol=atol, 
+            equal_nan=equal_nan
+        )
+
+        idxs = np.where(
+            np.logical_not(
+                isclose
+            )
+        )
+
+        return (
+            allclose, isclose,
+            aJ, nJ,
+            list(zip(aJ[idxs], nJ[idxs], *idxs))
+        )
+
     def _jac_diff(self, C, t, ions, T):
         D = self._difus_mat(T, ions, t)  # [μm^3/ms]
         return (D @ self.k_c).multiply(self.Vol1)  # [aM/μm^3/ms]
 
     def resample(self, freq):
-
         self.V = self.V.resample(freq).mean()
 
     # Caching functions
