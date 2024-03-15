@@ -8,8 +8,24 @@ from scipy.integrate import solve_ivp
 from scipy.sparse import csr_matrix, bmat
 from scipy import interpolate
 from scipy.misc import derivative
-from numba import jit
+# from numba import jit
 from tqdm import tqdm
+
+##### MYFUNC
+import sys
+from functools import wraps
+import time
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time.perf_counter()
+        result = f(*args, **kw)
+        te = time.perf_counter()
+        print(f'func:{f.__name__} took: {te-ts:2.8f} sec')
+        return result
+    return wrap
+#####
 
 
 class Simulation:
@@ -46,8 +62,7 @@ class Simulation:
         self.idV, self.idS = self.N._init_sim(dx, force_dx)
         self.Cm1 = 1 / self.N._capacitance_array()[:, np.newaxis]
         self.Vol1 = 1 / self.N._volume_array()[:, np.newaxis]
-        G = csr_matrix(self.N._conductance_mat())  # sparse matrix format for
-        # efficiency
+        G = csr_matrix(self.N._conductance_mat())  # sparse matrix format for efficiency
         self.k_c = csr_matrix(
             np.concatenate([np.identity(self.N.nb_comp), self.N._connection_mat()])
         )
@@ -64,6 +79,22 @@ class Simulation:
         self.sol_diff = dict()
         self.progressbar = progressbar
 
+        self.temperature = 310
+        self.species = tuple(self.N.species)
+        self.reactions = []
+        for reac in self.N.reactions:
+            # Conversion species to int
+            members = [
+                {self.species.index(sp): n for sp, n in member.items()}
+                for member in reac[0:2]
+            ]
+            if reac[2]:
+                self.reactions.append((*members, reac[2]))
+            members.reverse()
+            if reac[3]:
+                self.reactions.append((*members, reac[3]))
+
+    @timing
     def run(self, t_span, method="BDF", atol=1.49012e-8, **kwargs):
         """Run the voltage related simulation
 
@@ -167,7 +198,8 @@ class Simulation:
         df.index.name = "Time"
         return df
 
-    @staticmethod
+    # @timing
+    @staticmethod 
     def _ode_function(y, t, idV, idS, Cm1, G, v_source, channels, tq=None, t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
@@ -185,6 +217,7 @@ class Simulation:
         dV/dt = 1/Cm (G.V + Im )
 
         """
+
         vectorize = y.ndim > 1
         if not vectorize:
             y = y[:, np.newaxis]
@@ -214,6 +247,7 @@ class Simulation:
 
         return dV_S.squeeze()
 
+    @timing
     def run_diff(
         self, species=None, temperature=310, method="BDF", atol=1.49012e-8, **kwargs
     ):
@@ -237,35 +271,50 @@ class Simulation:
             <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_ doc
 
         """
-        tq = tqdm(total=self.t_span[1] - self.t_span[0], unit="ms")
+        if self.progressbar is not None:
+            tq = self.progressbar(total=self.t_span[1] - self.t_span[0], unit="ms")
+        else:
+            tq = None
 
         Simulation._flux.cache_clear()
         Simulation._difus_mat.cache_clear()
 
+        self.temperature = temperature
+
         if species is None:
-            species = tuple(
+            self.species = tuple(
                 self.N.species
             )  # conversion in tuple the ensure the order (N.species is a set)
+        else:
+            self.species = species
 
-        reactions = []
+        self.reactions = []
         for reac in self.N.reactions:
             # Conversion species to int
             members = [
-                {species.index(sp): n for sp, n in member.items()}
+                {self.species.index(sp): n for sp, n in member.items()}
                 for member in reac[0:2]
             ]
             if reac[2]:
-                reactions.append((*members, reac[2]))
+                self.reactions.append((*members, reac[2]))
             members.reverse()
             if reac[3]:
-                reactions.append((*members, reac[3]))
+                self.reactions.append((*members, reac[3]))
 
-        C0 = np.zeros((self.N.nb_comp, len(species)))
-        self.N._fill_C0_array(C0, species)
+        C0 = np.zeros((self.N.nb_comp, len(self.species)))
+        self.N._fill_C0_array(C0, self.species)
+
+        # print(reactions)
+        # print(species)
+        # print(C0)
+        # print(np.reshape(C0, -1, "F"))
+        # print(self._ode_diff_function(
+        #     np.reshape(C0, -1, "F"), self.t_span[0], species, reactions, temperature, tq, self.t_span
+        # ))
 
         sol = solve_ivp(
             lambda t, y: self._ode_diff_function(
-                y, t, species, reactions, temperature, tq, self.t_span
+                y, t, self.species, self.reactions, self.temperature, tq, self.t_span
             ),
             self.t_span,
             np.reshape(C0, -1, "F"),
@@ -274,15 +323,17 @@ class Simulation:
             # jac = lambda t, y:self.jac_diff(y,t,ions,temperature),
             **kwargs
         )
-        tq.close()
+        if tq is not None:
+            tq.close()
 
-        sp, sec, pos = self.N.indexV(species)
+        sp, sec, pos = self.N.indexV(self.species)
         df = pd.DataFrame(sol.y.T, sol.t, [sp, sec, pos])
         df.columns.names = ["Species", "Section", "Position (μm)"]
         df.index.name = "Time"
         self.C = df
         self.sol_diff = sol
 
+    # @timing
     def _ode_diff_function(self, y, t, ions, reactions, T, tq=None, t_span=None):
         """this function express the ode problem :
         dy/dt = f(y)
@@ -317,7 +368,7 @@ class Simulation:
         dC += self._flux(ions, t)  # [aM/ms]
         dC *= self.Vol1  # [aM/μm^3/ms]
         _fill_dC_reaction(dC, C, reactions)
-
+        
         # Progressbar
         if not (tq is None):
             n = round(t - t_span[0], 3)
@@ -331,7 +382,6 @@ class Simulation:
         return (D @ self.k_c).multiply(self.Vol1)  # [aM/μm^3/ms]
 
     def resample(self, freq):
-
         self.V = self.V.resample(freq).mean()
 
     # Caching functions

@@ -409,8 +409,8 @@ class NMDAR(Channel):
     @staticmethod
     def _I(V, t, t0, gnmda, tnmda1, tnmda2, V_nmda):
         return (
-            -((t <= t0 + 50) & (t >= t0))
-            * gnmda
+            ((t <= t0 + 50) & (t >= t0))
+            * -gnmda
             * (np.exp(-np.abs(t - t0) / tnmda1) - np.exp(-np.abs(t - t0) / tnmda2))
             / (1 + 0.33 * 2 * np.exp(-0.06 * (V - 65)))
             * (V - V_nmda)
