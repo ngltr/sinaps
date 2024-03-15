@@ -545,7 +545,7 @@ class NMDAR(Channel):
     @staticmethod
     def _dI(V, t, t0, gnmda, tnmda1, tnmda2, V_nmda):
         # dI/dV
-        yield ((t <= t0 + 50) & (t >= t0)) * (gnmda * (-1.95634 * V_nmda + np.exp(0.06 * V) + 1.95634 * V + 32.6056) * (np.exp(np.abs(t - t0)/tnmda1) - np.exp(np.abs(t - t0)/tnmda2)) * np.exp(0.06 * V - ((tnmda1 + tnmda2) * npabs(t - t0))/(tnmda1 * tnmda2)))/(32.6056 + np.exp(0.06 * V))**2
+        yield ((t <= t0 + 50) & (t >= t0)) * (gnmda * (-1.95634 * V_nmda + np.exp(0.06 * V) + 1.95634 * V + 32.6056) * (np.exp(np.abs(t - t0)/tnmda1) - np.exp(np.abs(t - t0)/tnmda2)) * np.exp(0.06 * V - ((tnmda1 + tnmda2) * np.abs(t - t0))/(tnmda1 * tnmda2)))/(32.6056 + np.exp(0.06 * V))**2
 
 
 def custom(func, name="Custom channel"):

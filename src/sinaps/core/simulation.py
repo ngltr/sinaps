@@ -4,6 +4,7 @@ from functools import reduce
 
 import numpy as np
 import pandas as pd
+import scipy as sp
 from scipy.integrate import solve_ivp
 from scipy.sparse import csr_matrix, bmat
 from scipy import interpolate
@@ -253,10 +254,10 @@ class Simulation:
             y = y[:, np.newaxis]
             
         n = len(self.idV) + len(self.idS)
-        V = y[self.idV, :]
         J = np.zeros((n, n))
 
         for c, s in self.channels.items():
+            V = y[s.idV, :]
             S = [y[s.idS[i], :] for i in range(c.nb_var)]
 
             if not hasattr(c, 'position'): 
@@ -308,10 +309,34 @@ class Simulation:
         nJ, _ = sp.integrate._ivp.common.num_jac(fun_vectorized, t_span[0], y, f, atol, None, None)
         aJ = self.jacobian(t_span[0], y)
 
+        allclose = np.allclose(
+            aJ, 
+            nJ, 
+            rtol=rtol, 
+            atol=atol, 
+            equal_nan=equal_nan
+        )
+
+        isclose = np.isclose(
+            aJ, 
+            nJ, 
+            rtol=rtol, 
+            atol=atol, 
+            equal_nan=equal_nan
+        )
+
+        idxs = np.where(
+            np.logical_not(
+                isclose
+            )
+        )
+
+        keys = ['x', 'y', 'ana', 'num']
+
         return (
-            np.allclose(aJ, nJ, rtol=rtol, atol=atol, equal_nan=equal_nan),
-            np.isclose(aJ, nJ, rtol=rtol, atol=atol, equal_nan=equal_nan),
+            allclose, isclose,
             aJ, nJ,
+            list(dict(zip(keys, d)) for d in zip(*idxs, aJ[idxs], nJ[idxs]))
         )
 
     @timing
@@ -498,10 +523,32 @@ class Simulation:
         nJ, _ = sp.integrate._ivp.common.num_jac(fun_vectorized, t_span[0], y, f, atol, None, None)
         aJ = self.diff_jacobian(t_span[0], y)
 
+        allclose = np.allclose(
+            aJ, 
+            nJ, 
+            rtol=rtol, 
+            atol=atol, 
+            equal_nan=equal_nan
+        )
+
+        isclose = np.isclose(
+            aJ, 
+            nJ, 
+            rtol=rtol, 
+            atol=atol, 
+            equal_nan=equal_nan
+        )
+
+        idxs = np.where(
+            np.logical_not(
+                isclose
+            )
+        )
+
         return (
-            np.allclose(aJ, nJ, rtol=rtol, atol=atol, equal_nan=equal_nan),
-            np.isclose(aJ, nJ, rtol=rtol, atol=atol, equal_nan=equal_nan),
+            allclose, isclose,
             aJ, nJ,
+            list(zip(aJ[idxs], nJ[idxs], *idxs))
         )
 
     def _jac_diff(self, C, t, ions, T):
