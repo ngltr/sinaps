@@ -5,437 +5,551 @@ from quantiphy import Quantity
 from sinaps.core.model import Channel
 from sinaps.core.species import Species
 
-
 class ConstantCurrent(Channel):
-    """Channel with a constant current.
+	"""Channel with a constant current.
 
-    Parameters
-    ----------
-    current : float
-        The current in [pA] for point channel or pA/um2 for density channel
+	Parameters
+	----------
+	current : float
+		The current in [pA] for point channel or pA/um2 for density channel
 
-    """
+	"""
 
-    param_names = ("current",)
+	param_names = ("current",)
 
-    def __init__(self, current):
-        self.params = {"current": current}
+	def __init__(self, current):
+		self.params = {"current": current}
 
-    @staticmethod
-    def _I(V, t, current):
-        return current
+	@staticmethod
+	def _I(V, t, current):
+		yield current
 
-    def __repr__(self):
-        return "ConstantCurrent(I={})".format(
-            Quantity(self.params["current"] * 1e-12, "A{}".format(self.density_str()))
-        )
+	def __repr__(self):
+		return "ConstantCurrent(I={})".format(
+			Quantity(self.params["current"] * 1e-12, "A{}".format(self.density_str()))
+		)
 
 
 class PulseCurrent(Channel):
-    """Channel with a constant current between a time period.
+	"""Channel with a constant current between a time period.
 
-    Parameters
-    ----------
-    current : float
-        The current in [pA] for point channel or pA/um2 for density channel
-    t0 : float
-        [ms] start time of the current pulse
-    tf : float
-        [ms] end time of the current pulse
+	Parameters
+	----------
+	current : float
+		The current in [pA] for point channel or pA/um2 for density channel
+	t0 : float
+		[ms] start time of the current pulse
+	tf : float
+		[ms] end time of the current pulse
 
-    """
+	"""
 
-    param_names = ("current", "t0", "tf")
+	param_names = ("current", "t0", "tf")
 
-    def __init__(self, current, t0, tf):
+	def __init__(self, current, t0, tf):
 
-        self.params = {
-            "current": current,
-            "t0": t0,
-            "tf": tf,
-        }
+		self.params = {
+			"current": current,
+			"t0": t0,
+			"tf": tf,
+		}
 
-    @staticmethod
-    def _I(V, t, current, t0, tf):
-        return ((t <= tf) & (t >= t0)) * current
+	@staticmethod
+	def _I(V, t, current, t0, tf):
+		yield ((t <= tf) & (t >= t0)) * current
 
 
 class HeavysideCurrent(PulseCurrent):
-    def __init__(self, current, t0, tf):
-        super().__init__(current, t0, tf)
-        raise FutureWarning("HeavysideCurrent is deprecated, use PulseCurrent instead")
+	def __init__(self, current, t0, tf):
+		super().__init__(current, t0, tf)
+		raise FutureWarning("HeavysideCurrent is deprecated, use PulseCurrent instead")
 
 
 class LeakChannel(Channel):
-    """Leak channel  I = (V-Veq) * G_m.
+	"""Leak channel  I = (V-Veq) * G_m.
 
-    Parameters
-    ----------
-    Veq : float
-        [mV] Equilibrium potential for the leak channel
-    G_m : float
-        [mS/cm2] Resistance of the menbrane (leak channel)
+	Parameters
+	----------
+	Veq : float
+		[mV] Equilibrium potential for the leak channel
+	G_m : float
+		[mS/cm2] Resistance of the menbrane (leak channel)
 
-    """
+	"""
 
-    param_names = ("Veq", "R_m")
+	param_names = ("Veq", "R_m")
 
-    def __init__(self, G_m=0.3, Veq=0):
-        """ """
-        self.params = {"Veq": Veq, "R_m": 1 / G_m * 100}
-        # conversion to GΩ.μm2: 1/(1 mS/cm2) = 100 GΩ.μm2
+	def __init__(self, G_m=0.3, Veq=0.):
+		""" """
+		self.params = {"Veq": Veq, "R_m": 1 / G_m * 100}
+		# conversion to GΩ.μm2: 1/(1 mS/cm2) = 100 GΩ.μm2
 
-    @staticmethod
-    def _I(V, t, Veq, R_m):
-        """
-        Return the net surfacic current [pA/um2] of the mechanism towards inside
-        """
-        return (Veq - V) / R_m
+	@staticmethod
+	def _I(V, t, Veq, R_m):
+		"""
+		Return the net surfacic current [pA/um2] of the mechanism towards inside
+		"""
+		yield (Veq - V) / R_m
 
-    def __repr__(self):
-        return "LeakChannel(Veq={}, G_m={})".format(
-            Quantity(self.params["Veq"] * 1e-3, "V"),
-            Quantity(1 / self.params["R_m"] * 1e-1, "S/cm²"),
-        )
+	def __repr__(self):
+		return "LeakChannel(Veq={}, G_m={})".format(
+			Quantity(self.params["Veq"] * 1e-3, "V"),
+			Quantity(1 / self.params["R_m"] * 1e-1, "S/cm²"),
+		)
 
 
 class Hodgkin_Huxley(Channel):
-    """Hodgkin Huxley channels
+	"""Hodgkin Huxley channels
 
-    Parameters
-    ----------
-    gNa : float
-        [mS/cm2] Conductance of sodium channel
-    V_Na : float
-        [mV] Equilibrium potential of sodium channel
-    gK :  float
-        [mS/cm2] Conductance of potasium channel
-    V_K : float
-        [mV] Equilibrium potential of potasium channel
-    gL :  float
-        [mS/cm2] conductance of leak channel
-    V_L : float
-        [mV] Equilibrium potential of leak channel
+	Parameters
+	----------
+	gNa : float
+		[mS/cm2] Conductance of sodium channel
+	V_Na : float
+		[mV] Equilibrium potential of sodium channel
+	gK :  float
+		[mS/cm2] Conductance of potasium channel
+	V_K : float
+		[mV] Equilibrium potential of potasium channel
+	gL :  float
+		[mS/cm2] conductance of leak channel
+	V_L : float
+		[mV] Equilibrium potential of leak channel
 
-    """
+	"""
 
-    nb_var = 3
-    param_names = ("gNa", "V_Na", "gK", "V_K", "gL", "V_L")
+	nb_var = 3
+	param_names = ("gNa", "V_Na", "gK", "V_K", "gL", "V_L")
 
-    def __init__(self, gNa=120, V_Na=115, gK=36, V_K=-12, gL=0.3, V_L=10.6):
-        """Channel Hodgkin Huxley type
-        gNa : conductance of sodium channel [mS/cm2]
-        V_Na : Equilibrium potential of sodium channel [mV]
-        gK :  conductance of potasium channel [mS/cm2]
-        V_K : Equilibrium potential of potasium channel [mV]
-        gL :  conductance of leak channel [mS/cm2]
-        V_L : Equilibrium potential of leak channel [mV]
-        """
-        self.params = {
-            "gNa": gNa / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-            "V_Na": V_Na,
-            "gK": gK / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-            "V_K": V_K,
-            "gL": gL / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-            "V_L": V_L,
-        }
+	def __init__(self, gNa=120., V_Na=115., gK=36., V_K=-12., gL=0.3, V_L=10.6):
+		"""Channel Hodgkin Huxley type
+		gNa : conductance of sodium channel [mS/cm2]
+		V_Na : Equilibrium potential of sodium channel [mV]
+		gK :  conductance of potasium channel [mS/cm2]
+		V_K : Equilibrium potential of potasium channel [mV]
+		gL :  conductance of leak channel [mS/cm2]
+		V_L : Equilibrium potential of leak channel [mV]
+		"""
+		self.params = {
+			"gNa": gNa / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+			"V_Na": V_Na,
+			"gK": gK / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+			"V_K": V_K,
+			"gL": gL / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+			"V_L": V_L,
+		}
 
-    @staticmethod
-    def _I(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
-        I_Na = gNa * m ** 3 * h * (V - V_Na)
-        I_K = gK * n ** 4 * (V - V_K)
-        I_L = gL * (V - V_L)
-        return -I_Na - I_K - I_L
+	@staticmethod
+	def _I(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+		I_Na = gNa * m ** 3 * h * (V - V_Na)
+		I_K = gK * n ** 4 * (V - V_K)
+		I_L = gL * (V - V_L)
+		yield -I_Na - I_K - I_L
 
-    @staticmethod
-    def _dS(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
-        dn = (
-            0.1 * (1 - 0.1 * V) * (1 - n) / (np.exp(1 - 0.1 * V) - 1)
-            - 0.125 * np.exp(-V / 80) * n
-        )
-        dm = (2.5 - 0.1 * V) * (1 - m) / (np.exp(2.5 - 0.1 * V) - 1) - 4 * np.exp(
-            -V / 18
-        ) * m
-        dh = 0.07 * np.exp(-V / 20) * (1 - h) - h / (np.exp(3 - 0.1 * V) + 1)
-        return dn, dm, dh
+	@staticmethod
+	def _dS(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+		dn = (
+			0.1 * (1 - 0.1 * V) * (1 - n) / (np.exp(1 - 0.1 * V) - 1)
+			- 0.125 * np.exp(-V / 80) * n
+		)
+		dm = (2.5 - 0.1 * V) * (1 - m) / (np.exp(2.5 - 0.1 * V) - 1) - 4 * np.exp(
+			-V / 18
+		) * m
+		dh = 0.07 * np.exp(-V / 20) * (1 - h) - h / (np.exp(3 - 0.1 * V) + 1)
+		yield dn, dm, dh
 
-    @staticmethod
-    def _J(ion, V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+	@staticmethod
+	def _J(ion, V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
 
-        if ion is Species.Na:
-            return (gNa * m ** 3 * h * (V - V_Na)) / 96.48533132838746
-        elif ion is Species.K:
-            return (gK * n ** 4 * (V - V_K)) / 96.48533132838746
-        else:
-            return 0 * V
+		if ion is Species.Na:
+			yield (gNa * m ** 3 * h * (V - V_Na)) / 96.48533132838746
+		elif ion is Species.K:
+			yield (gK * n ** 4 * (V - V_K)) / 96.48533132838746
+		else:
+			yield 0 * V
 
-    def S0(self):
-        """Return the initial value for the state variable
-        n = 0.317
-        m = 0.0526
-        h = 0.5734
-        """
-        return 0.317, 0.0526, 0.5734
+	def S0(self):
+		"""Return the initial value for the state variable
+		n = 0.317
+		m = 0.0526
+		h = 0.5734
+		"""
+		return 0.317, 0.0526, 0.5734
+
+	@staticmethod
+	def _dI(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+		# dI/dV
+		dI_Na = gNa * m**3 * h
+		dI_K = gK * n**4
+		dI_L = gL
+		yield - (dI_Na + dI_K + dI_L)
+		# dI/dn
+		dI_Na = np.zeros_like(V)
+		dI_K = 4 * gK * n**3 * (V - V_K)
+		dI_L = np.zeros_like(V)
+		yield - (dI_Na + dI_K + dI_L)
+		# dI/dm
+		dI_Na = 3 * gNa * m**2 * h * (V - V_Na)
+		dI_K = np.zeros_like(V)
+		dI_L = np.zeros_like(V)
+		yield - (dI_Na + dI_K + dI_L)
+		# dI/dh
+		dI_Na = gNa * m**3 * (V - V_Na)
+		dI_K = np.zeros_like(V)
+		dI_L = np.zeros_like(V)
+		yield - (dI_Na + dI_K + dI_L)
+
+	@staticmethod
+	def _ddS(V, n, m, h, t, gNa, V_Na, gK, V_K, gL, V_L):
+		# d(n')/dV
+		yield (0.01 * (1 - n) * np.exp(1 - 0.1 * V) * (1 - 0.1 * V))/(np.exp(1 - 0.1 * V) - 1)**2 - (0.01 * (1 - n))/(np.exp(1 - 0.1 * V) - 1) + 0.0015625 * n * np.exp(-V/80)
+		# d(n')/dn
+		yield (0.01 * V - 0.1) / (np.exp(1 - 0.1 * V) - 1) - 0.125 * np.exp(-V / 80)
+		# d(n')/dm
+		yield np.zeros_like(n)
+		# d(n')/dh
+		yield np.zeros_like(n)
+		# d(m')/dV
+		yield (-0.1 * (1 - m))/(-1 + np.exp(2.5 - 0.1 * V)) + (2 * m)/(9 * np.exp(V/18)) + (0.1 * np.exp(2.5 - 0.1 * V) * (1 - m) * (2.5 - 0.1 * V))/(-1 + np.exp(2.5 - 0.1 * V))**2
+		# d(m')/dn
+		yield np.zeros_like(m)
+		# d(m')/dm
+		yield -4/np.exp(V/18) + (2.5 - 0.1 * V)/(1 - 12.1825/np.exp(0.1 * V))
+		# d(m')/dh
+		yield np.zeros_like(m)
+		# d(h')/dV
+		yield (-0.0035 + 0.0035 * h)/np.exp(V/20) - (2.00855 * np.exp(0.1 * V) * h)/(np.exp(3) + np.exp(0.1 * V))**2
+		# d(h')/dn
+		yield np.zeros_like(h)
+		# d(h')/dm
+		yield np.zeros_like(h)
+		# d(h')/dh
+		yield -0.07/np.exp(V/20) - 1/(1 + np.exp(3 - 0.1 * V))
 
 
 class Hodgkin_Huxley_red(Channel):
-    """Hodgkin Huxley channel reduced version.
+	"""Hodgkin Huxley channel reduced version.
 
-    Simplification of the classical HH, with m = m_{\infty}, and h = 0.89 - 1.1 n
-    (see Mathematical Physiology, Keener J. and Sneyd J., chap.5)
+	Simplification of the classical HH, with m = m_{\infty}, and h = 0.89 - 1.1 n
+	(see Mathematical Physiology, Keener J. and Sneyd J., chap.5)
 
-    Parameters
-    ----------
-    gNa : float
-        [mS/cm2] Conductance of sodium channel
-    V_Na : float
-        [mV] Equilibrium potential of sodium channel
-    gK :  float
-        [mS/cm2] Conductance of potasium channel
-    V_K : float
-        [mV] Equilibrium potential of potasium channel
-    gL :  float
-        [mS/cm2] conductance of leak channel
-    V_L : float
-        [mV] Equilibrium potential of leak channel
+	Parameters
+	----------
+	gNa : float
+		[mS/cm2] Conductance of sodium channel
+	V_Na : float
+		[mV] Equilibrium potential of sodium channel
+	gK :  float
+		[mS/cm2] Conductance of potasium channel
+	V_K : float
+		[mV] Equilibrium potential of potasium channel
+	gL :  float
+		[mS/cm2] conductance of leak channel
+	V_L : float
+		[mV] Equilibrium potential of leak channel
 
-    """
+	"""
 
-    nb_var = 1
-    param_names = ("gNa", "V_Na", "gK", "V_K", "gL", "V_L")
+	nb_var = 1
+	param_names = ("gNa", "V_Na", "gK", "V_K", "gL", "V_L")
 
-    def __init__(self, gNa=120, V_Na=115, gK=36, V_K=-12, gL=0.3, V_L=10.6):
+	def __init__(self, gNa=120., V_Na=115., gK=36., V_K=-12., gL=0.3, V_L=10.6):
 
-        self.params = {
-            "gNa": gNa / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-            "V_Na": V_Na,
-            "gK": gK / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-            "V_K": V_K,
-            "gL": gL / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-            "V_L": V_L,
-        }
+		self.params = {
+			"gNa": gNa / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+			"V_Na": V_Na,
+			"gK": gK / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+			"V_K": V_K,
+			"gL": gL / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+			"V_L": V_L,
+		}
 
-    @staticmethod
-    def _I(V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
-        alpha_m = (2.5 - 0.1 * V) / (np.exp(2.5 - 0.1 * V) - 1)
-        beta_m = 4 * np.exp(-V / 18)
-        m = alpha_m / (alpha_m + beta_m)
-        h = 0.89 - 1.1 * n
-        I_Na = gNa * m ** 3 * h * (V - V_Na)
-        I_K = gK * n ** 4 * (V - V_K)
-        I_L = gL * (V - V_L)
-        return -I_Na - I_K - I_L
+	@staticmethod
+	def _I(V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
+		alpha_m = (2.5 - 0.1 * V) / (np.exp(2.5 - 0.1 * V) - 1)
+		beta_m = 4 * np.exp(-V / 18)
+		m = alpha_m / (alpha_m + beta_m)
+		h = 0.89 - 1.1 * n
+		I_Na = gNa * m ** 3 * h * (V - V_Na)
+		I_K = gK * n ** 4 * (V - V_K)
+		I_L = gL * (V - V_L)
+		yield -I_Na - I_K - I_L
 
-    @staticmethod
-    def _dS(V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
-        dn = (
-            0.1 * (1 - 0.1 * V) * (1 - n) / (np.exp(1 - 0.1 * V) - 1)
-            - 0.125 * np.exp(-V / 80) * n
-        )
-        return dn
+	@staticmethod
+	def _dS(V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
+		dn = (
+			0.1 * (1 - 0.1 * V) * (1 - n) / (np.exp(1 - 0.1 * V) - 1)
+			- 0.125 * np.exp(-V / 80) * n
+		)
+		yield dn
 
-    @staticmethod
-    def _J(ion, V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
-        """
-        Return the flux of ion [aM/ms/um2] of the mechanism towards inside
-        """
-        alpha_m = (2.5 - 0.1 * V) / (np.exp(2.5 - 0.1 * V) - 1)
-        beta_m = 4 * np.exp(-V / 18)
-        m = alpha_m / (alpha_m + beta_m)
-        h = 0.89 - 1.1 * n
-        I_Na = gNa * m ** 3 * h * (V - V_Na)
-        I_K = gK * n ** 4 * (V - V_K)
-        if ion is Species.Na:
-            return -I_Na / 96.48533132838746
-        elif ion is Species.K:
-            return -I_K / 96.48533132838746
-        else:
-            return 0 * V
+	@staticmethod
+	def _J(ion, V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
+		"""
+		Return the flux of ion [aM/ms/um2] of the mechanism towards inside
+		"""
+		alpha_m = (2.5 - 0.1 * V) / (np.exp(2.5 - 0.1 * V) - 1)
+		beta_m = 4 * np.exp(-V / 18)
+		m = alpha_m / (alpha_m + beta_m)
+		h = 0.89 - 1.1 * n
+		I_Na = gNa * m ** 3 * h * (V - V_Na)
+		I_K = gK * n ** 4 * (V - V_K)
+		if ion is Species.Na:
+			yield -I_Na / 96.48533132838746
+		elif ion is Species.K:
+			yield -I_K / 96.48533132838746
+		else:
+			yield 0 * V
 
-    def S0(self):
-        """Return the initial value for the state variable
+	def S0(self):
+		"""Return the initial value for the state variable
 
-        n = 0.316
-        """
-        return 0.3162
+		n = 0.316
+		"""
+		return 0.3162
+
+	@staticmethod
+	def _dI(V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
+		# dI/dV
+		alpha_m = (2.5 - 0.1 * V) / (np.exp(2.5 - 0.1 * V) - 1)
+		dalpha_m = (0.1 * np.exp(0.2 * V) + np.exp(0.1 * V) * (1.82737 - 0.121825 * V)) / (-12.1825 + np.exp(0.1 * V))**2
+		beta_m = 4 * np.exp(-V / 18)
+		dbeta_m = - (2 / 9) * np.exp(-V / 18)
+		m = alpha_m / (alpha_m + beta_m)
+		dm = (beta_m * dalpha_m - alpha_m * dbeta_m) / (alpha_m + beta_m)**2
+		h = 0.89 - 1.1 * n
+		dI_Na = gNa * m**2 * h * (3 * (V - V_Na) * dm + m)
+		dI_K = gK * n**4
+		dI_L = gL
+		yield - (dI_Na + dI_K + dI_L)
+		# dI/dn
+		dh = -1.1
+		dI_Na = gNa * (V - V_Na) * m**3 * dh
+		dI_K = 4 * gK * n**3 * (V - V_K)
+		dI_L = np.zeros_like(V)
+		yield - (dI_Na + dI_K + dI_L)
+
+	@staticmethod
+	def _ddS(V, n, t, gNa, V_Na, gK, V_K, gL, V_L):
+		# d(n')/dV
+		yield (-0.01 * (1 - n))/(-1 + np.exp(1 - 0.1 * V)) + (0.0015625 * n)/np.exp(V/80) + (0.01 * np.exp(1 - 0.1 * V) * (1 - n) * (1 - 0.1 * V))/(-1 + np.exp(1 - 0.1 * V))**2
+		# d(n')/dn
+		yield (0.01 * V - 0.1) / (np.exp(1 - 0.1 * V) - 1) - 0.125 * np.exp(-V / 80)
 
 
 class Hodgkin_Huxley_Ca(Channel):
-    """Ca channel to add to Hodgkin Huxley
+	"""Ca channel to add to Hodgkin Huxley
 
-    Parameters
-    ----------
-    gCa : float
-        [mS/cm2] Conductance of calcium channel
-    V_Ca : float
-        [mV] Equilibrium potential of calcium channel
+	Parameters
+	----------
+	gCa : float
+		[mS/cm2] Conductance of calcium channel
+	V_Ca : float
+		[mV] Equilibrium potential of calcium channel
 
-    """
+	"""
 
-    nb_var = 2
-    param_names = ("gCa", "V_Ca")
+	nb_var = 2
+	param_names = ("gCa", "V_Ca")
 
-    def __init__(self, gCa=14.5, V_Ca=115):  #
-        self.params = {
-            "gCa": gCa / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
-            "V_Ca": V_Ca,
-        }
+	def __init__(self, gCa=14.5, V_Ca=115.):  #
+		self.params = {
+			"gCa": gCa / 100,  # conversion mS/cm2 in nS/μm2: 1 mS/cm2 = 0.01 nS/μm2
+			"V_Ca": V_Ca,
+		}
 
-    @staticmethod
-    def _I(V, m, h, t, gCa, V_Ca):
-        """
-        Return the net surfacic current [pA/um2] of the mechanism towards inside
-        """
-        I_Ca = gCa * m ** 3 * h * (V - V_Ca)
-        return -I_Ca
+	@staticmethod
+	def _I(V, m, h, t, gCa, V_Ca):
+		"""
+		Return the net surfacic current [pA/um2] of the mechanism towards inside
+		"""
+		I_Ca = gCa * m ** 3 * h * (V - V_Ca)
+		yield -I_Ca
 
-    @staticmethod
-    def _J(ion, V, m, h, t, gCa, V_Ca):
-        """
-        Return the flux of ion [aM/ms/um2] of the mechanism towards inside
-        """
-        if ion is Species.Ca:
-            return -gCa * m ** 3 * h * (V - V_Ca) / 96.48533132838746 / 2
-        else:
-            return 0 * V
+	@staticmethod
+	def _J(ion, V, m, h, t, gCa, V_Ca):
+		"""
+		Return the flux of ion [aM/ms/um2] of the mechanism towards inside
+		"""
+		if ion is Species.Ca:
+			yield -gCa * m ** 3 * h * (V - V_Ca) / 96.48533132838746 / 2
+		else:
+			yield 0 * V
 
-    @staticmethod
-    def _dS(V, m, h, t, gCa, V_Ca):
-        dm = 1 / 1.3 * (1 / (1 + np.exp(-V + 102)) - m)
-        dh = 1 / 10 * (1 / (1 + np.exp(-V + 24)) - h)
-        return dm, dh
+	@staticmethod
+	def _dS(V, m, h, t, gCa, V_Ca):
+		dm = 1 / 1.3 * (1 / (1 + np.exp(-V + 102)) - m)
+		dh = 1 / 10 * (1 / (1 + np.exp(-V + 24)) - h)
+		yield dm, dh
 
-    def S0(self):
-        """Return the initial value for the state variable
+	def S0(self):
+		"""Return the initial value for the state variable
 
-        m = 0
-        h = 1
-        """
-        return 0, 1
+		m = 0
+		h = 1
+		"""
+		return 0, 1
+
+	@staticmethod
+	def _dI(V, m, h, t, gCa, V_Ca):
+		# dI/dV
+		yield -(gCa * m**3 * h)
+		# dI/dm
+		yield -(3 * gCa * h * m**2 * (V - V_Ca))
+		# dI/dh
+		yield -(gCa * m**3 * (V - V_Ca))
+		
+	@staticmethod
+	def _ddS(V, m, h, t, gCa, V_Ca):
+		# d(m')/dV
+		yield (0.769231 * np.exp(102 - V)) / (1 + np.exp(102 - V))**2
+		# d(m')/dm
+		yield -0.769231 * np.ones_like(m)
+		# d(m')/dh
+		yield np.zeros_like(m)
+		# d(h')/dV
+		yield np.exp(24 - V) / (10 * (1 + np.exp(24 - V))**2)
+		# d(h')/dm
+		yield np.zeros_like(h)
+		# d(h')/dh
+		yield -0.1 * np.ones_like(h)
 
 
 class AMPAR(Channel):
-    """Point channel with a AMPAr-type current starting at time t0.
+	"""Point channel with a AMPAr-type current starting at time t0.
 
-    Parameters
-    ----------
-    t0: float
-        start of the current [ms]
-    gampa: float
-        max conductance of Ampar [nS]
-    tampa1: float
-        Ampar time constant [ms]
-    tampa2: float
-        Ampar time constant [ms]
-    V_ampa: float
-        Ampar Nernst potential [mV]
+	Parameters
+	----------
+	t0: float
+		start of the current [ms]
+	gampa: float
+		max conductance of Ampar [nS]
+	tampa1: float
+		Ampar time constant [ms]
+	tampa2: float
+		Ampar time constant [ms]
+	V_ampa: float
+		Ampar Nernst potential [mV]
 
-    """
+	"""
 
-    param_names = ("gampa", "tampa1", "tampa2", "V_ampa", "t0")
+	param_names = ("gampa", "tampa1", "tampa2", "V_ampa", "t0")
 
-    def __init__(self, t0, gampa=0.02, tampa1=0.3, tampa2=3, V_ampa=70):
-        self.params = {
-            "t0": t0,
-            "gampa": gampa,
-            "tampa1": tampa1,
-            "tampa2": tampa2,
-            "V_ampa": V_ampa,
-        }
+	def __init__(self, t0, gampa=0.02, tampa1=0.3, tampa2=3., V_ampa=70.):
+		self.params = {
+			"t0": t0,
+			"gampa": gampa,
+			"tampa1": tampa1,
+			"tampa2": tampa2,
+			"V_ampa": V_ampa,
+		}
 
-    @staticmethod
-    def _I(V, t, t0, gampa, tampa1, tampa2, V_ampa):
-        return (
-            ((t <= t0 + 20) & (t >= t0))
-            * (-gampa)
-            * (1 - np.exp(-np.abs(t - t0) / tampa1))
-            * np.exp(-np.abs(t - t0) / tampa2)
-            * (V - V_ampa)
-        )
+	@staticmethod
+	def _I(V, t, t0, gampa, tampa1, tampa2, V_ampa):
+		yield (
+			((t <= t0 + 20) & (t >= t0))
+			* (-gampa)
+			* (1 - np.exp(-np.abs(t - t0) / tampa1))
+			* np.exp(-np.abs(t - t0) / tampa2)
+			* (V - V_ampa)
+		)
 
-    @staticmethod
-    def _J(ion, V, t, t0, gampa, tampa1, tampa2, V_ampa):
-        """
-        Return the flux of ion [aM/ms/um2] of the mechanism towards inside
-        """
-        if ion is Species.Ca:
-            return ((t <= t0 + 20) & (t >= t0)) * np.maximum(
-                -gampa
-                * (1 - np.exp(-np.abs(t - t0) / tampa1))
-                * np.exp(-np.abs(t - t0) / tampa2)
-                * (V - V_ampa)
-                / 96.48533132838746
-                / 2
-                * 0.014,
-                0,
-            )
-        else:
-            return 0 * V
+	@staticmethod
+	def _J(ion, V, t, t0, gampa, tampa1, tampa2, V_ampa):
+		"""
+		Return the flux of ion [aM/ms/um2] of the mechanism towards inside
+		"""
+		if ion is Species.Ca:
+			yield ((t <= t0 + 20) & (t >= t0)) * np.maximum(
+				-gampa
+				* (1 - np.exp(-np.abs(t - t0) / tampa1))
+				* np.exp(-np.abs(t - t0) / tampa2)
+				* (V - V_ampa)
+				/ 96.48533132838746
+				/ 2
+				* 0.014,
+				0,
+			)
+		else:
+			yield 0 * V
+
+	@staticmethod
+	def _dI(V, t, t0, gampa, tampa1, tampa2, V_ampa):
+		# dI/dV
+		yield ((t <= t0 + 20) & (t >= t0)) * gampa * (1 - np.exp(-np.abs(t - t0)/tampa1)) * (-np.exp(-np.abs(t - t0)/tampa2))
 
 
 class NMDAR(Channel):
-    """Point channel with a NMDAr-type current starting at time t0.
+	"""Point channel with a NMDAr-type current starting at time t0.
 
-    Voltage-dependent flow of sodium (Na+) and small amounts of calcium (Ca2+)
-    ions into the cell and potassium (K+) out of the cell.
+	Voltage-dependent flow of sodium (Na+) and small amounts of calcium (Ca2+)
+	ions into the cell and potassium (K+) out of the cell.
 
-    Parameters
-    ----------
-    t0: float
-        start of the current [ms]
-    gnmda: float
-        max conductance of NMDAr [nS]
-    tnmda1: float
-        NMDAr time constant [ms]
-    tnmda2: float
-        NMDAr time constant [ms]
-    V_nmda: float
-        NMDAr Nernst potential [mV]
+	Parameters
+	----------
+	t0: float
+		start of the current [ms]
+	gnmda: float
+		max conductance of NMDAr [nS]
+	tnmda1: float
+		NMDAr time constant [ms]
+	tnmda2: float
+		NMDAr time constant [ms]
+	V_nmda: float
+		NMDAr Nernst potential [mV]
 
-    """
+	"""
 
-    param_names = ("t0", "gnmda", "tnmda1", "tnmda2", "V_nmda")
+	param_names = ("t0", "gnmda", "tnmda1", "tnmda2", "V_nmda")
 
-    def __init__(self, t0, gnmda=0.2, tnmda1=11.5, tnmda2=0.67, V_nmda=75):
+	def __init__(self, t0, gnmda=0.2, tnmda1=11.5, tnmda2=0.67, V_nmda=75.):
 
-        self.params = {
-            "t0": t0,
-            "gnmda": gnmda,
-            "tnmda1": tnmda1,
-            "tnmda2": tnmda2,
-            "V_nmda": V_nmda,
-        }
+		self.params = {
+			"t0": t0,
+			"gnmda": gnmda,
+			"tnmda1": tnmda1,
+			"tnmda2": tnmda2,
+			"V_nmda": V_nmda,
+		}
 
-    @staticmethod
-    def _I(V, t, t0, gnmda, tnmda1, tnmda2, V_nmda):
-        return (
-            -((t <= t0 + 50) & (t >= t0))
-            * gnmda
-            * (np.exp(-np.abs(t - t0) / tnmda1) - np.exp(-np.abs(t - t0) / tnmda2))
-            / (1 + 0.33 * 2 * np.exp(-0.06 * (V - 65)))
-            * (V - V_nmda)
-        )
+	@staticmethod
+	def _I(V, t, t0, gnmda, tnmda1, tnmda2, V_nmda):
+		yield (
+			((t <= t0 + 50) & (t >= t0))
+			* -gnmda
+			* (np.exp(-np.abs(t - t0) / tnmda1) - np.exp(-np.abs(t - t0) / tnmda2))
+			/ (1 + 0.33 * 2 * np.exp(-0.06 * (V - 65)))
+			* (V - V_nmda)
+		)
 
-    @staticmethod
-    def _J(ion, V, t, t0, gnmda, tnmda1, tnmda2, V_nmda):
-        """
-        Return the flux of ion [aM/ms/um2] of the mechanism towards inside
-        """
-        if ion is Species.Ca:
-            return ((t <= t0 + 50) & (t >= t0)) * np.maximum(
-                -gnmda
-                * (np.exp(-np.abs(t - t0) / tnmda1) - np.exp(-np.abs(t - t0) / tnmda2))
-                / (1 + 0.33 * 2 * np.exp(-0.06 * (V - 65)))
-                * (V - V_nmda)
-                / 96.48533132838746
-                / 2
-                * 0.15,
-                0,
-            )
-        else:
-            return 0 * V
+	@staticmethod
+	def _J(ion, V, t, t0, gnmda, tnmda1, tnmda2, V_nmda):
+		"""
+		Return the flux of ion [aM/ms/um2] of the mechanism towards inside
+		"""
+		if ion is Species.Ca:
+			yield ((t <= t0 + 50) & (t >= t0)) * np.maximum(
+				-gnmda
+				* (np.exp(-np.abs(t - t0) / tnmda1) - np.exp(-np.abs(t - t0) / tnmda2))
+				/ (1 + 0.33 * 2 * np.exp(-0.06 * (V - 65)))
+				* (V - V_nmda)
+				/ 96.48533132838746
+				/ 2
+				* 0.15,
+				0,
+			)
+		else:
+			yield 0 * V
+
+	@staticmethod
+	def _dI(V, t, t0, gnmda, tnmda1, tnmda2, V_nmda):
+		# dI/dV
+		with np.errstate(over='ignore', invalid='ignore'):
+			yield ((t <= t0 + 50.) & (t >= t0)) * (gnmda * (-1.95634 * V_nmda + np.exp(0.06 * V) + 1.95634 * V + 32.6056) * (np.exp(np.abs(t - t0)/tnmda1) - np.exp(np.abs(t - t0)/tnmda2)) * np.exp(0.06 * V - ((tnmda1 + tnmda2) * np.abs(t - t0))/(tnmda1 * tnmda2)))/(32.6056 + np.exp(0.06 * V))**2
 
 
 def custom(func, name="Custom channel"):
-    C = type(name, (Channel,), {"_I": func})
-    return C()
+	C = type(name, (Channel,), {"_I": func})
+	return C()
+
+

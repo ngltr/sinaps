@@ -21,6 +21,21 @@ class Species(Enum):
             "+" if CHARGE[self] > 0 else "-",
         )
 
+    def __lt__(self, other):
+        return self.name < other.name and CHARGE[self] < CHARGE[other] and DIFFUSION_COEF[self] < DIFFUSION_COEF[other] and INITIAL_CONCENTRATION[self] < INITIAL_CONCENTRATION[other]
+
+    def __gt__(self, other):
+        return self.name > other.name and CHARGE[self] > CHARGE[other] and DIFFUSION_COEF[self] > DIFFUSION_COEF[other] and INITIAL_CONCENTRATION[self] > INITIAL_CONCENTRATION[other]
+
+    def __le__(self, other):
+        return self.name <= other.name and CHARGE[self] <= CHARGE[other] and DIFFUSION_COEF[self] <= DIFFUSION_COEF[other] and INITIAL_CONCENTRATION[self] <= INITIAL_CONCENTRATION[other]
+
+    def __ge__(self, other):
+        return self.name >= other.name and CHARGE[self] >= CHARGE[other] and DIFFUSION_COEF[self] >= DIFFUSION_COEF[other] and INITIAL_CONCENTRATION[self] >= INITIAL_CONCENTRATION[other]
+
+    def __ne__(self, other):
+        return self.name != other.name and CHARGE[self] != CHARGE[other] and DIFFUSION_COEF[self] != DIFFUSION_COEF[other] and INITIAL_CONCENTRATION[self] != INITIAL_CONCENTRATION[other]
+
 
 CHARGE = {
     Species.Ca: 2,

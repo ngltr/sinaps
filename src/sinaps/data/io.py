@@ -13,12 +13,11 @@ def read_comp_imaging(filename):
     with open(filename) as f:
         nodeIDs = re.findall(r"NodeID:(-?\d+)\r?\n[PN]", f.read())
     # 2.convert string to int
-    nodeIDs = list(map(int, nodeIDs))
+    nodeIDs = map(int, nodeIDs)
     # reaarange values to get list of edges
-    edges = [(nodeIDs[k + 1], nodeIDs[k]) for k in range(0, len(nodeIDs) - 1, 2)]
-
+    edges = zip(nodeIDs, nodeIDs)
     N = Neuron()
-    for parent, child in edges:
+    for child, parent in edges:
         N.add_section(Section(), parent, child)
     N.__traversal_source__ = -1
 
