@@ -57,16 +57,16 @@ class DiffusionCoefficientError(ValueError):
         )
 
 
-class SectionAttribute(param.Range):
+class SectionAttribute(param.Number):
     """Parameter than can be a tuple or a value"""
 
-    step = None
+    # step = None
 
-    def _validate(self, val):
-        if not hasattr(val, "__len__"):
-            super()._validate((val,) * 2)
-        else:
-            super()._validate(val)
+    # def _validate(self, val):
+    #     if not hasattr(val, "__len__"):
+    #         super()._validate((val,) * 2)
+    #     else:
+    #         super()._validate(val)
 
 
 class Neuron(param.Parameterized):
@@ -637,7 +637,7 @@ class Section(param.Parameterized):
     @property
     def r_l(self):
         """Longitudinal resistance per unit length [GOhm/μm]"""
-        return self._R_l / (PI * self.a ** 2)
+        return self._R_l / (PI * self.a**2)
 
     @property
     def c_m(self):

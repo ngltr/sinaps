@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "sinaps"
+version = "0.3.0"
+description = ""Neuronal simulation package""
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python ="3.12.3"
+ipykernel = "^7.1.0"
+numpy = "^2.3.5"
+numba = "^0.63.1"
+pandas = "^2.3.3"
+quantiphy = "^2.20"
+scipy = "^1.16.3"
+param = "^2.3.1"
+networkx = "^3.6.1"
+tqdm = "^4.67.1"
+hvplot = "^0.12.2"
+datashader = "^0.18.2"
+jupyter-bokeh = "^4.0.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

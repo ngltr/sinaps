@@ -7,7 +7,7 @@ import pandas as pd
 from scipy.integrate import solve_ivp
 from scipy.sparse import csr_matrix, bmat
 from scipy import interpolate
-from scipy.misc import derivative
+from scipy.differentiate import derivative
 from numba import jit
 from tqdm import tqdm
 
